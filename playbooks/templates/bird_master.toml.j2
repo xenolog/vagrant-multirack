@@ -1,0 +1,12 @@
+[template]
+prefix = "/network_metadata"
+src = "bird.tmpl"
+dest = "/etc/bird/bird.conf"
+owner = "root"
+mode = "0644"
+keys = [
+  "nodes",
+  "racks",
+]
+#check_cmd = "true" #"birdc sh proto"
+#reload_cmd = "birdc configure"

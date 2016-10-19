@@ -1,0 +1,51 @@
+---
+- hosts: all
+  tasks:
+  - block:
+    - name: Setup ssh keys
+      file: path=/root/.ssh state=absent
+    - file: path=/root/.ssh state=directory mode=755
+    - copy: dest=/root/.ssh/config content='Host 10.*\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null' mode=644
+    - copy: src=../tmp/ssh/authorized_keys dest=/root/.ssh/authorized_keys mode=644
+
+- hosts: all
+  tasks:
+    - name: Install addition packages
+      apt: name={{item}} state=latest
+      with_items:
+        - traceroute
+
+    - name: Install ETCDTOOL
+      copy: src=../files/bin/etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755
+
+    - block:
+      - name: Install CONFD
+        copy: src=../files/bin/confd-0.11.0-linux-amd64 dest=/usr/local/bin/confd owner=root mode=755
+      - file: path=/etc/confd state=directory
+      - file: path=/etc/confd/conf.d state=directory
+      - file: path=/etc/confd/templates state=directory
+
+    - name: transfer network_metadata
+      copy: src=../tmp/network_metadata.yaml dest=/etc/network_metadata.yaml
+
+    - block:
+      - name: Configure default gateway through TOR
+        lineinfile:
+          dest: /etc/network/interfaces
+          line: "      gateway {{tor_ipaddr}}"
+          insertafter: "^iface\\s+{{rack_iface}}\\s+"
+        register: interfaces_rack_changed
+      - replace:
+          dest: /etc/dhcp/dhclient.conf
+          regexp: "(,\\s+routers,)"
+          replace: ","
+        register: dhclient_conf_changed
+      - shell: "ifdown eth0 ;sleep 1; ifup eth0"
+        ignore_errors: True
+        when: dhclient_conf_changed.changed
+      - command: "ip route delete default"
+        ignore_errors: True
+        when: interfaces_rack_changed.changed
+      - shell: "ifdown {{rack_iface}} ;sleep 1; ifup {{rack_iface}}"
+        ignore_errors: True
+        when: interfaces_rack_changed.changed

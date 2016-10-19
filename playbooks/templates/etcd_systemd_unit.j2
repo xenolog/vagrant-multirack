@@ -1,0 +1,19 @@
+[Unit]
+Description=Etcd Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=5
+TimeoutStopSec=5
+Type=simple
+Restart=always
+RestartSec=1
+Environment=ETCD_IPV4={{master_node_ipaddr}} CONTAINER_NAME=%n SYSTEMD=1
+ExecStart=/usr/local/bin/etcd.sh start
+ExecStartPost=/usr/local/bin/etcd.sh post-start
+ExecStop=/usr/local/bin/etcd.sh stop
+ExecStopPost=/usr/local/bin/etcd.sh post-stop
+
+[Install]
+WantedBy=multi-user.target

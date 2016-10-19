@@ -1,0 +1,85 @@
+---
+- hosts: all
+  tasks:
+  - block:
+    - name: Setup ssh keys
+      file: path=/root/.ssh state=absent
+    - file: path=/root/.ssh state=directory mode=755
+    - copy: dest=/root/.ssh/config content='Host 10.*\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null' mode=644
+    - copy: src=../tmp/ssh/authorized_keys dest=/root/.ssh/authorized_keys mode=644
+    - copy: src=../tmp/ssh/id_rsa          dest=/root/.ssh/id_rsa mode=600
+    - copy: src=../tmp/ssh/id_rsa.pub      dest=/root/.ssh/id_rsa.pub mode=644
+
+- hosts: all
+  tasks:
+    - name: Install addition packages
+      apt: name={{item}} state=latest
+      with_items:
+        - traceroute
+        - docker.io
+        - python-docker
+
+    - name: Install ETCDTOOL
+      copy: src=../files/bin/etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755
+
+    - block:
+      - name: Install and run ETCD
+        copy: src=../files/etcd.sh dest=/usr/local/bin/etcd.sh owner=root mode=755
+      - docker_image: name=quay.io/coreos/etcd:latest
+      - template: src="templates/etcd_systemd_unit.j2" dest="/etc/systemd/system/etcd.service"
+        register: etcd_unit_installed
+      - command: systemctl daemon-reload
+        when: etcd_unit_installed.changed
+      - service: name=etcd enabled=yes state=started
+
+    - block:
+      - name: Install CONFD
+        copy: src=../files/bin/confd-0.11.0-linux-amd64 dest=/usr/local/bin/confd owner=root mode=755
+      - file: path=/etc/confd state=directory
+      - file: path=/etc/confd/conf.d state=directory
+      - file: path=/etc/confd/templates state=directory
+
+    - block:
+      - name: Install ETCDCTL
+        command: test -x /usr/local/bin/etcdctl
+        register: etcdctl_installed
+        ignore_errors: True
+      - command: docker cp etcd.service:/usr/local/bin/etcdctl /usr/local/bin/etcdctl
+        when: etcdctl_installed|failed
+      - file: path=/usr/local/bin/etcdctl mode=755
+        when: etcdctl_installed|failed
+
+    - block:
+      - name: Upload network_metadata to ETCD
+        copy: src=../tmp/network_metadata.yaml dest=/etc/network_metadata.yaml
+      - copy: src=../tmp/nodes                 dest=/var/tmp/nodes
+      - command: etcdctl ls /network_metadata
+        register: network_metadata_uploaded
+        ignore_errors: True
+      - command: etcdtool import -y -f yaml /network_metadata /etc/network_metadata.yaml
+        when: network_metadata_uploaded|failed
+        register: network_metadata_loaded_to_etcd
+      - command: /usr/local/bin/etcd.sh backup
+        environment:
+          ETCD_IPV4: "{{ master_node_ipaddr }}"
+        when: network_metadata_loaded_to_etcd.changed
+
+    - block:
+      - name: Install and start BIRD bgpd
+        apt_repository: repo='ppa:cz.nic-labs/bird'
+      - apt: name=bird state=latest update_cache=yes
+      - file: path=/etc/init/bird.override state=absent
+      - copy: src=templates/bird_master.toml.j2 dest=/etc/confd/conf.d/bird.toml
+      - copy: src=templates/bird_master.tmpl.j2 dest=/etc/confd/templates/bird.tmpl
+      - name: Generate main BIRD config by confd
+        command: confd -onetime
+        environment:
+          HOSTNAME: "{{ master_node_name }}"
+        ignore_errors: True
+      - file: path=/var/log/bird state=directory owner=bird group=bird mode=755
+      - copy: dest=/var/log/bird/master.log content="Use 'journalctl -u bird' for looking log."
+      - name: disable start of bird6 service
+        file: path=/etc/bird/bird6.conf state=absent
+      - service: name=bird6 enabled=no state=stopped
+      - service: name=bird enabled=yes state=reloaded
+

@@ -1,0 +1,25 @@
+---
+- hosts: all
+  tasks:
+  - block:
+    - name: Virtual router main script
+      copy: src=../files/virt-router.sh dest=/usr/local/bin/virt-router.sh
+      register: virt_router_installed
+    - file: path=/usr/local/bin/virt-router.sh mode=755
+      when: virt_router_installed.changed
+    - name: Virtual router unit
+      template: src="templates/tor_systemd_unit.j2" dest="/etc/systemd/system/tor@.service"
+      register: virt_router_unit_installed
+    - command: systemctl daemon-reload
+      when: virt_router_unit_installed.changed
+
+  - block:
+    - name: TOR bgpd config templates for CONFD
+      template: src="templates/bird_tor.toml.j2" dest="/etc/confd/conf.d/bird_tor{{"%02d"|format(rack_number)}}.toml"
+    - template: src="templates/bird_tor.tmpl.j2" dest="/etc/confd/templates/bird_tor{{"%02d"|format(rack_number)}}.tmpl"
+    - name: Generate bird config for rack-{{"%02d"|format(rack_number)}}
+      command: confd -onetime
+      environment:
+        HOSTNAME: "{{ master_node_name }}"
+      ignore_errors: True
+    - service: name=tor@{{rack_number}} enabled=yes state=running
