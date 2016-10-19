@@ -2,16 +2,23 @@ vagrant-k8s
 ===========
 Scripts to:
 
-* Create libvirt lab with vagrant and prepare some prerequirements.
-* Deploy Kubernetes with Calico networking plugin on a list of nodes using Kargo.
-* Deploy OpenStack Containerized Control Plane (fuel-ccp) with networking-calico on top of k8s.
+* Create libvirt lab with multi-rack network topology with Ubuntu 16.04 on the nodes.
 
-![Deployment scheme](img/k8s-ccp-calico-02.png)
+Often developer need lab for emulate amount of nodes, located into
+defferent racks with no L2 connectivity between racks. Typical scheme is
+
+![Deployment scheme](img/Typical_multirack.svg)
+
+Into KVM virtual environment this network topology will be implemented as:
+
+![Deployment scheme](img/VENV_multirack.svg)
+
 
 Requirements
 ------------
 
 * `libvirt`
+* `ansible v2.1+`
 * `vagrant`
 * `vagrant-libvirt` plugin (`vagrant plugin install vagrant-libvirt`)
 * `$USER` should be able to connect to libvirt (test with `virsh list --all`)
@@ -22,14 +29,15 @@ Vargant lab preparation
 * Change default IP pool for vagrant networks if you want
 
 ```bash
-export VAGRANT_POOL="10.100.0.0/16"
+export VAGRANT_MR_POOL="10.100.0.0/16"
+
 ```
 
 * Clone this repo
 
 ```bash
-git clone https://github.com/adidenko/vagrant-k8s
-cd vagrant-k8s
+git clone https://github.com/xenolog/vagrant-multirack
+cd vagrant-multirack
 ```
 
 * Prepare the virtual lab
@@ -38,13 +46,31 @@ cd vagrant-k8s
 vagrant up
 ```
 
+By default will be deployed environmert, contains:
+
+* Master node
+* two racks
+* two nodes per rack
+* virtual TORs implemented as network namespaces into master node VM
+
+You able to re-define following default constants:
+
+* VAGRANT_MR_NAME_SUFFIX -- virtual env name suffix to able deploy different ENVs from one repo.
+* VAGRANT_MR_NETWORK_BASE_AS_NUMBER -- AS number of core router and master node
+* VAGRANT_MR_NETWORK_PUBLIC -- Public network CIDR
+* VAGRANT_MR_NUM_OF_RACKS -- amount of virtual racks
+* VAGRANT_MR_RACK{N}_NODES -- specify node amount for rack N
+* VAGRANT_MR_NETWORK_RACK{N}_CIDR -- specify CIDR for network inside rack
+* VAGRANT_MR_RACK{N}_AS_NUMBER -- specify rack AS number
+
+
 Deployment Kubernetes on your lab
 ---------------------------------
 
 * Login to master node and sudo to root
 
 ```bash
-vagrant ssh $USER-k8s-00
+vagrant ssh $USER-000
 sudo su -
 ```
 
@@ -81,117 +107,4 @@ ansible all -m ping -i $INVENTORY
 ```bash
 cd ~/mcp
 ./deploy-k8s.kargo.sh
-```
-
-Deploy CCP on Kubernetes
-------------------------
-
-* Make sure CCP deployment config matches your deployment environment
-and update if needed. You can also add you CCP reviews here
-
-```bash
-cd ~/mcp
-cat ccp.yaml
-```
-
-* Run some extra customizations
-
-```bash
-ansible-playbook -i $INVENTORY playbooks/design.yaml -e @ccp.yaml
-```
-
-* Clone CCP installer
-
-```bash
-cd ~/mcp
-git clone https://github.com/adidenko/fuel-ccp-ansible
-```
-
-* Deploy OpenStack CCP
-
-```bash
-cd ~/mcp
-# Build CCP images
-ansible-playbook -i $INVENTORY fuel-ccp-ansible/build.yaml -e @ccp.yaml
-# Deploy CCP
-ansible-playbook -i $INVENTORY fuel-ccp-ansible/deploy.yaml -e @ccp.yaml
-```
-
-* Login to any **k8s master** node and wait for CCP deployment to complete
-
-```bash
-# On k8s master node
-# Check CCP pods, all should become running
-kubectl --namespace=ccp get pods -o wide
-
-# Check CCP jobs status, wait until all complete
-kubectl --namespace=ccp get jobs
-```
-
-* Check Horizon
-
-```bash
-# On k8s master node check nodePort of Horizon service
-HORIZON_PORT=$(kubectl --namespace=ccp get svc/horizon -o go-template='{{(index .spec.ports 0).nodePort}}')
-echo $HORIZON_PORT
-
-# Access Horizon via nodePort
-curl -i -s $ANY_K8S_NODE_IP:$HORIZON_PORT
-```
-
-Working with kubernetes
------------------------
-
-* Login to one of your kube-master nodes and run
-
-```bash
-# List images in registry
-curl -s 127.0.0.1:31500/v2/_catalog | python -mjson.tool
-
-# Check CCP jobs status
-kubectl --namespace=ccp get jobs
-
-# Check CCP pods
-kubectl --namespace=ccp get pods -o wide
-```
-
-* Troubleshooting
-
-```bash
-# Get logs from pod
-kubectl --namespace=ccp logs $POD_NAME
-
-# Exec command from pod
-kubectl --namespace=ccp exec $POD_NAME -- cat /etc/resolv.conf
-kubectl --namespace=ccp exec $POD_NAME -- curl http://etcd-client:2379/health
-
-# Run a container
-docker run -t -i 127.0.0.1:31500/mcp/neutron-dhcp-agent /bin/bash
-```
-
-* Network checker
-
-```bash
-cd ~/mcp
-./deploy-netchecker.sh
-# or in ccp namespace
-./deploy-netchecker.sh ccp
-```
-
-* CCP
-
-```bash
-# Run a bash in one of containers
-docker run -t -i 127.0.0.1:31500/mcp/nova-base /bin/bash
-
-# Inside container export credentials
-export OS_USERNAME=admin
-export OS_PASSWORD=password
-export OS_TENANT_NAME=admin
-export OS_REGION_NAME=RegionOne
-export OS_AUTH_URL=http://keystone:35357
-
-# Run CLI commands
-openstack service list
-neutron agent-list
 ```
