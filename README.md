@@ -11,7 +11,7 @@ defferent racks with no L2 connectivity between racks. Typical scheme is
 
 Into KVM virtual environment this network topology will be implemented as:
 
-![Implementation scheme](img/VENV_multirack.svg?raw=true)
+![Implementation scheme](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/VENV_multirack.svg)
 
 
 Requirements
@@ -56,11 +56,11 @@ By default will be deployed environmert, contains:
 You able to re-define following default constants:
 
 * VAGRANT_MR_NAME_SUFFIX -- virtual env name suffix to able deploy different ENVs from one repo.
-* VAGRANT_MR_NETWORK_BASE_AS_NUMBER -- AS number of core router and master node
+* VAGRANT_MR_BASE_AS_NUMBER -- AS number of core router and master node
 * VAGRANT_MR_NETWORK_PUBLIC -- Public network CIDR
 * VAGRANT_MR_NUM_OF_RACKS -- amount of virtual racks
-* VAGRANT_MR_RACK{N}_NODES -- specify node amount for rack N
-* VAGRANT_MR_NETWORK_RACK{N}_CIDR -- specify CIDR for network inside rack
+* VAGRANT_MR_RACK{N}_NODES -- specify nodes amount for rack N
+* VAGRANT_MR_RACK{N}_CIDR -- specify CIDR for network inside rack
 * VAGRANT_MR_RACK{N}_AS_NUMBER -- specify rack AS number
 
 
@@ -91,14 +91,14 @@ cd ~/mcp
 
 ```bash
 export INVENTORY=`pwd`/nodes_to_inv.py
-export K8S_NODES_FILE=`pwd`/nodes
+export K8S_NODES_FILE=/var/tmp/nodes
 ```
 
 * Check `nodes` list and make sure you have SSH access to them
 
 ```bash
 cd ~/mcp
-cat nodes
+cat $K8S_NODES_FILE
 ansible all -m ping -i $INVENTORY
 ```
 
