@@ -7,11 +7,11 @@ Scripts to:
 Often developer need lab for emulate amount of nodes, located into
 defferent racks with no L2 connectivity between racks. Typical scheme is
 
-![Deployment scheme](img/Typical_multirack.svg)
+![Deployment scheme](img/Typical_multirack.svg?raw=true)
 
 Into KVM virtual environment this network topology will be implemented as:
 
-![Deployment scheme](img/VENV_multirack.svg)
+![Deployment scheme](img/VENV_multirack.svg?raw=true)
 
 
 Requirements
