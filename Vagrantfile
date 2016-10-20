@@ -1,5 +1,4 @@
 # -*- mode: ruby -*-
-# vi: set ft=ruby :
 
 require "yaml"
 
@@ -16,7 +15,7 @@ ENV["VAGRANT_DEFAULT_PROVIDER"] = "libvirt"
 prefix = pool.gsub(/\.\d+\.\d+\/16$/, "")
 
 num_racks = (ENV["VAGRANT_MR_NUM_OF_RACKS"] || "2").to_i
-base_as_number = (ENV["VAGRANT_MR_NETWORK_BASE_AS_NUMBER"] || "65000").to_i
+base_as_number = (ENV["VAGRANT_MR_BASE_AS_NUMBER"] || "65000").to_i
 
 vm_memory = 6144
 vm_cpus = 2
@@ -33,8 +32,7 @@ nodes_per_rack = [0] # racks numbered from 1
 
 (1..num_racks).each do |rack_no|
   nodes_per_rack << (ENV["VAGRANT_MR_RACK#{rack_no}_NODES"] || "2").to_i
-  public_subnets << (ENV["VAGRANT_MR_NETWORK_RACK#{rack_no}_PUBLIC"] || '')
-  rack_subnets << (ENV["VAGRANT_MR_NETWORK_RACK#{rack_no}_RACK"] || prefix.to_s + ".#{rack_no}.0/24")
+  rack_subnets << (ENV["VAGRANT_MR_RACK#{rack_no}_CIDR"] || prefix.to_s + ".#{rack_no}.0/24")
 end
 
 node_name_prefix = "#{user}"
@@ -248,3 +246,4 @@ Vagrant.configure("2") do |config|
     end
   end
 end
+# vi: set ft=ruby :
