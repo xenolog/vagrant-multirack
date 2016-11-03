@@ -1,5 +1,5 @@
-vagrant-k8s
-===========
+vagrant-multirack
+=================
 Scripts to:
 
 * Create libvirt lab with multi-rack network topology with Ubuntu 16.04 on the nodes.
