@@ -60,6 +60,7 @@ You able to re-define following default constants:
 * VAGRANT_MR_NETWORK_PUBLIC -- Public network CIDR
 * VAGRANT_MR_NUM_OF_RACKS -- amount of virtual racks
 * VAGRANT_MR_RACK{N}_NODES -- specify nodes amount for rack N
+* VAGRANT_MR_RACK{N}\_CP\_NODES -- specify nodes which will used for control plane (in the 1,2,3 format). Dedault it's a first node from each rack.
 * VAGRANT_MR_RACK{N}_CIDR -- specify CIDR for network inside rack
 * VAGRANT_MR_RACK{N}_AS_NUMBER -- specify rack AS number
 
@@ -70,41 +71,26 @@ Deployment Kubernetes on your lab
 * Login to master node and sudo to root
 
 ```bash
-vagrant ssh $USER-000
-sudo su -
-```
-
-* Clone this repo
-
-```bash
-git clone https://github.com/adidenko/vagrant-k8s ~/mcp
-```
-
-* Install required software and pull needed repos
-
-```bash
-cd ~/mcp
-./bootstrap-master.sh
+vagrant ssh $USER-000 -c 'sudo -i'
 ```
 
 * Set env vars for dynamic inventory
 
 ```bash
-export INVENTORY=`pwd`/nodes_to_inv.py
-export K8S_NODES_FILE=/var/tmp/nodes
+export INVENTORY=/root/k8s_inventory.py
+export K8S_NETWORK_METADATA=/etc/network_metadata.yaml
 ```
+
+* Check customization configuration into `/root/k8s_customization.yaml` file
 
 * Check `nodes` list and make sure you have SSH access to them
 
 ```bash
-cd ~/mcp
-cat $K8S_NODES_FILE
 ansible all -m ping -i $INVENTORY
 ```
 
 * Deploy k8s using kargo playbooks
 
 ```bash
-cd ~/mcp
-./deploy-k8s.kargo.sh
+ansible-playbook -i $INVENTORY /root/kargo/cluster.yml -e @/root/k8s_customization.yaml
 ```

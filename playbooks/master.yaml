@@ -6,9 +6,15 @@
       file: path=/root/.ssh state=absent
     - file: path=/root/.ssh state=directory mode=755
     - copy: dest=/root/.ssh/config content='Host 10.*\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null' mode=644
-    - copy: src=../tmp/ssh/authorized_keys dest=/root/.ssh/authorized_keys mode=644
-    - copy: src=../tmp/ssh/id_rsa          dest=/root/.ssh/id_rsa mode=600
-    - copy: src=../tmp/ssh/id_rsa.pub      dest=/root/.ssh/id_rsa.pub mode=644
+    - copy: src=../tmp/ssh/{{item.name}} dest=/root/.ssh/ mode={{item.mode}}
+      with_items:
+        - name: authorized_keys
+          mode: 644
+        - name: id_rsa
+          mode: 600
+        - name: id_rsa.pub
+          mode: 644
+
 
 - hosts: all
   tasks:
@@ -16,15 +22,18 @@
       apt: name={{item}} state=latest
       with_items:
         - traceroute
+        - tcpdump
+        - curl
+        - telnet
         - docker.io
         - python-docker
 
     - name: Install ETCDTOOL
-      copy: src=../files/bin/etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755
+      copy: src=../files/bin/etcdtool dest=/usr/local/bin/ owner=root mode=755
 
     - block:
       - name: Install and run ETCD
-        copy: src=../files/etcd.sh dest=/usr/local/bin/etcd.sh owner=root mode=755
+        copy: src=../files/etcd.sh dest=/usr/local/bin/ owner=root mode=755
       - docker_image: name=quay.io/coreos/etcd:latest
       - template: src="templates/etcd_systemd_unit.j2" dest="/etc/systemd/system/etcd.service"
         register: etcd_unit_installed
@@ -51,8 +60,7 @@
 
     - block:
       - name: Upload network_metadata to ETCD
-        copy: src=../tmp/network_metadata.yaml dest=/etc/network_metadata.yaml
-      - copy: src=../tmp/nodes                 dest=/var/tmp/nodes
+        copy: src=../tmp/network_metadata.yaml dest=/etc/
       - command: etcdctl ls /network_metadata
         register: network_metadata_uploaded
         ignore_errors: True
@@ -63,6 +71,34 @@
         environment:
           ETCD_IPV4: "{{ master_node_ipaddr }}"
         when: network_metadata_loaded_to_etcd.changed
+
+    - block:
+      - name: Setup K8S master node related stuff
+        apt_repository: repo='ppa:ansible/ansible'
+      - apt: name=ansible state=latest update_cache=yes
+      - apt: name={{item}} state=latest
+        with_items:
+          - git
+          - python-setuptools
+          - gcc
+          - python-dev
+          - python-pip
+          - libssl-dev
+          - libffi-dev
+          - software-properties-common
+          - python-netaddr
+      - git: repo=https://github.com/kubernetes-incubator/kargo dest=/root/kargo clone=yes
+
+    - block:
+      - name: Copy customazation-related files
+        #copy: src=../{{item.name}} dest=/root/ {%- if item.mode -%}{{item.mode}}{% endif %}
+        copy: src=../{{item.name}} dest=/root/ mode={{item.mode|default('644')}}
+        with_items:
+          - name: k8s_inventory.py
+            mode: 755
+          - name: k8s_customization.yaml
+            options: ''
+
 
     - block:
       - name: Install and start BIRD bgpd

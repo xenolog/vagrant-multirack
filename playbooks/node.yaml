@@ -14,6 +14,17 @@
       apt: name={{item}} state=latest
       with_items:
         - traceroute
+        - python-pip
+        - screen
+        - vim
+        - telnet
+        - tcpdump
+        - iperf3
+        - nmap
+        - ethtool
+        - curl
+        - git
+        - dnsutils
 
     - name: Install ETCDTOOL
       copy: src=../files/bin/etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755

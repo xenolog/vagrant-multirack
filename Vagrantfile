@@ -29,10 +29,14 @@ public_subnets  = [public_subnet_000]
 rack_subnets = ['']
 vagrant_cidr = prefix.to_s + ".0.0/24"
 nodes_per_rack = [0] # racks numbered from 1
+cp_nodes_for_rack = [[]] # racks numbered has no nodes
 
 (1..num_racks).each do |rack_no|
   nodes_per_rack << (ENV["VAGRANT_MR_RACK#{rack_no}_NODES"] || "2").to_i
   rack_subnets << (ENV["VAGRANT_MR_RACK#{rack_no}_CIDR"] || prefix.to_s + ".#{rack_no}.0/24")
+  cp_nodes = (ENV["VAGRANT_MR_RACK#{rack_no}_CP_NODES"] || "1").split(',').select{|x| x.to_i > 0}
+  cp_nodes = [1] if cp_nodes.size <1
+  cp_nodes_for_rack << cp_nodes.map{|x| x.to_i}
 end
 
 node_name_prefix = "#{user}"
@@ -95,8 +99,10 @@ router_if_shift = 1
       'as_number'  => (ENV["VAGRANT_MR_RACK#{rack_no}_AS_NUMBER"] || base_as_number+rack_no).to_i,
       'rack_no'    => rack_no,
     }
-    if 1 == node_no
-      network_metadata["nodes"][node_name]['node_roles'] << 'rr'
+    if cp_nodes_for_rack[rack_no].include? node_no
+      network_metadata["nodes"][node_name]['node_roles'] += ['rr', 'kube_master', 'kube_etcd']
+    else
+      network_metadata["nodes"][node_name]['node_roles'] << 'kube_node'
     end
   end
 end
