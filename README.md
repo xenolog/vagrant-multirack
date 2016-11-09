@@ -5,9 +5,13 @@ Scripts to:
 * Create libvirt lab with multi-rack network topology with Ubuntu 16.04 on the nodes.
 
 Often developer need lab for emulate amount of nodes, located into
-defferent racks with no L2 connectivity between racks. Typical scheme is
+defferent racks with no L2 connectivity between racks. Typical scheme of clean lab is
 
 ![Network_topology](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/Typical_multirack.svg)
+
+For example, k8s multi-rack deployment with AS per rack topology and Calico usage may look
+
+![Network_topology](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/Typical_multirack_k8s_calico.svg)
 
 Into KVM virtual environment this network topology will be implemented as:
 
@@ -48,9 +52,11 @@ vagrant up
 
 By default will be deployed environmert, contains:
 
-* Master node
+* Master node, prepared for run `kargo`
 * two racks
 * two nodes per rack
+* First node of each rack is a k8s control-plane node.
+* First node of each rack contains RouteReflector container.
 * virtual TORs implemented as network namespaces into master node VM
 
 You able to re-define following default constants:
@@ -60,7 +66,7 @@ You able to re-define following default constants:
 * VAGRANT_MR_NETWORK_PUBLIC -- Public network CIDR
 * VAGRANT_MR_NUM_OF_RACKS -- amount of virtual racks
 * VAGRANT_MR_RACK{N}_NODES -- specify nodes amount for rack N
-* VAGRANT_MR_RACK{N}\_CP\_NODES -- specify nodes which will used for control plane (in the 1,2,3 format). Dedault it's a first node from each rack.
+* VAGRANT_MR_RACK{N}\_CP\_NODES -- specify nodes which will used for control plane (in the 1,2,3 format).
 * VAGRANT_MR_RACK{N}_CIDR -- specify CIDR for network inside rack
 * VAGRANT_MR_RACK{N}_AS_NUMBER -- specify rack AS number
 
