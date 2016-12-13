@@ -33,6 +33,12 @@ def nodes_to_hash(network_metadata, group_vars):
           'kube-node': {
               'hosts': [],
           },
+          'bird-rr': {
+              'children': ['kube-master']
+          },
+          'bird-node': {
+              'children': ['kube-node']
+          },
           'k8s-cluster': {
               'children': ['kube-node', 'kube-master']
           },
@@ -76,10 +82,12 @@ def nodes_to_hash(network_metadata, group_vars):
             nodes['etcd']['hosts'].append(node_name)
         rack_no = int(node.get('rack_no', 1))
         racks[rack_no]['hosts'].append(node_name)
+    nodes['all']['hosts'].sort()
     nodes['kube-master']['hosts'].sort()
     nodes['kube-node']['hosts'].sort()
     nodes['etcd']['hosts'].sort()
     for rack_no in racks:
+        racks[rack_no]['hosts'].sort()
         nodes["rack{0}".format(rack_no)] = racks[rack_no]
     return nodes
 
