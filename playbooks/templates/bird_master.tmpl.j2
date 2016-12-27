@@ -21,8 +21,9 @@ protocol kernel {
   persist;        # Don't remove routes on bird shutdown
   scan time 2;    # Scan kernel routing table every 2 seconds
   import all;
-  graceful restart;
   export all;     # Default is export none
+  merge paths;    # For ECMP in routing table
+  graceful restart;
 }
 
 protocol direct {
@@ -47,6 +48,7 @@ protocol bgp 'rack-{{$i}}' {
   #multihop;
   import all;
   export all;
+  add paths;     # For ECMP in BGP session with TOR
   #next hop keep;
 }
 {{end}} {{end}}
