@@ -17,10 +17,10 @@ prefix = pool.gsub(/\.\d+\.\d+\/16$/, "")
 num_racks = (ENV["VAGRANT_MR_NUM_OF_RACKS"] || "2").to_i
 base_as_number = (ENV["VAGRANT_MR_BASE_AS_NUMBER"] || "65000").to_i
 
-vm_memory = 6144
-vm_cpus = 2
-master_memory = 2048
-master_cpus = 1
+vm_memory = (ENV["VAGRANT_MR_NODE_MEMORY"] || "6144").to_i
+vm_cpus = (ENV["VAGRANT_MR_NODE_CPUS"] || "2").to_i
+master_memory = (ENV["VAGRANT_MR_MASTER_MEMORY"] || "2048").to_i
+master_cpus = (ENV["VAGRANT_MR_MASTER_CPUS"] || "1").to_i
 
 user = ENV["USER"]
 

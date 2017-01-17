@@ -69,6 +69,10 @@ You able to re-define following default constants:
 * VAGRANT_MR_RACK{N}\_CP\_NODES -- specify nodes which will used for control plane (in the 1,2,3 format).
 * VAGRANT_MR_RACK{N}_CIDR -- specify CIDR for network inside rack
 * VAGRANT_MR_RACK{N}_AS_NUMBER -- specify rack AS number
+* VAGRANT_MR_MASTER_MEMORY -- amount of memory for master node (default: 6144)
+* VAGRANT_MR_MASTER_CPUS -- amount of CPUs for master node (default: 2)
+* VAGRANT_MR_NODE_MEMORY -- amount of memory for nodes (default: 2048)
+* VAGRANT_MR_NODE_CPUS -- amount of CPUs for nodes (default: 1)
 
 
 Deployment Kubernetes on your lab
