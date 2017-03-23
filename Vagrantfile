@@ -12,14 +12,14 @@ end
 pool = ENV["VAGRANT_MR_POOL"] || "10.250.0.0/16"
 
 ENV["VAGRANT_DEFAULT_PROVIDER"] = "libvirt"
-prefix = pool.gsub(/\.\d+\.\d+\/16$/, "")
+prefix = pool.gsub(/\.\d+\.\d+\/\d\d$/, "")
 
 num_racks = (ENV["VAGRANT_MR_NUM_OF_RACKS"] || "2").to_i
 base_as_number = (ENV["VAGRANT_MR_BASE_AS_NUMBER"] || "65000").to_i
 
-vm_memory = (ENV["VAGRANT_MR_NODE_MEMORY"] || "6144").to_i
+vm_memory = (ENV["VAGRANT_MR_NODE_MEMORY"] || "2048").to_i
 vm_cpus = (ENV["VAGRANT_MR_NODE_CPUS"] || "2").to_i
-master_memory = (ENV["VAGRANT_MR_MASTER_MEMORY"] || "2048").to_i
+master_memory = (ENV["VAGRANT_MR_MASTER_MEMORY"] || "4096").to_i
 master_cpus = (ENV["VAGRANT_MR_MASTER_CPUS"] || "1").to_i
 
 user = ENV["USER"]
@@ -31,12 +31,25 @@ vagrant_cidr = prefix.to_s + ".0.0/24"
 nodes_per_rack = [0] # racks numbered from 1
 cp_nodes_for_rack = [[]] # racks numbered has no nodes
 
+print("### ENV:\n" +
+      "    number of racks: #{num_racks}\n"+
+      "    master node MEM: #{master_memory}\n"+
+      "    master node CPU: #{master_cpus}\n"+
+      "          nodes MEM: #{vm_memory}\n"+
+      "          nodes CPU: #{vm_cpus}\n"+
+      "     control subnet: #{vagrant_cidr}\n"+
+      "      public subnet: #{public_subnets[0]}\n\n")
+
+
 (1..num_racks).each do |rack_no|
   nodes_per_rack << (ENV["VAGRANT_MR_RACK#{rack_no}_NODES"] || "2").to_i
   rack_subnets << (ENV["VAGRANT_MR_RACK#{rack_no}_CIDR"] || prefix.to_s + ".#{rack_no}.0/24")
   cp_nodes = (ENV["VAGRANT_MR_RACK#{rack_no}_CP_NODES"] || "1").split(',').select{|x| x.to_i > 0}
   cp_nodes = [1] if cp_nodes.size <1
   cp_nodes_for_rack << cp_nodes.map{|x| x.to_i}
+  print("### RACK #{rack_no}:\n" +
+        "    nodes: #{nodes_per_rack[rack_no]}  (CP: #{cp_nodes_for_rack[rack_no].join(',')})\n"+
+        "   subnet: #{rack_subnets[rack_no]}\n\n")
 end
 
 node_name_prefix = "#{user}"
