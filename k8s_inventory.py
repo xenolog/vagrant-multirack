@@ -75,7 +75,8 @@ def nodes_to_hash(network_metadata, group_vars):
             'rack_no':          node['rack_no'],
             'as_number':        node['as_number'],
         }
-        nodes['kube-node']['hosts'].append(node_name)
+        if 'kube_node' in node_roles:
+            nodes['kube-node']['hosts'].append(node_name)
         if 'kube_master' in node_roles:
             nodes['kube-master']['hosts'].append(node_name)
         if 'kube_etcd' in node_roles:
