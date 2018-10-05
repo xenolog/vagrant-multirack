@@ -9,10 +9,16 @@ class ::Hash
     end
 end
 
+# workaround for https://app.vagrantup.com/boxes/ usage
+# Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
+
 pool = ENV["VAGRANT_MR_POOL"] || "10.250.0.0/16"
 
 ENV["VAGRANT_DEFAULT_PROVIDER"] = "libvirt"
 prefix = pool.gsub(/\.\d+\.\d+\/\d\d$/, "")
+
+# Boxes with libvirt provider support:
+box = ENV["VAGRANT_MR_BOX"] || "adidenko/ubuntu-1604-k8s" 
 
 num_racks = (ENV["VAGRANT_MR_NUM_OF_RACKS"] || "2").to_i
 base_as_number = (ENV["VAGRANT_MR_BASE_AS_NUMBER"] || "65000").to_i
@@ -55,9 +61,6 @@ end
 node_name_prefix = "#{user}"
 node_name_suffix = ENV["VAGRANT_MR_NAME_SUFFIX"] || ""
 node_name_prefix+= "-#{node_name_suffix}" if node_name_suffix != ""
-
-# Boxes with libvirt provider support:
-box = "adidenko/ubuntu-1604-k8s"
 
 # Create SSH keys for future lab
 system "bash scripts/ssh-keygen.sh"
