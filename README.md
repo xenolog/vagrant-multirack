@@ -61,6 +61,7 @@ By default will be deployed environmert, contains:
 
 You able to re-define following default constants:
 
+* VAGRANT_MR_BOX -- Vagrant box name. It should be 
 * VAGRANT_MR_NAME_SUFFIX -- virtual env name suffix to able deploy different ENVs from one repo.
 * VAGRANT_MR_BASE_AS_NUMBER -- AS number of core router and master node
 * VAGRANT_MR_NETWORK_PUBLIC -- Public network CIDR
