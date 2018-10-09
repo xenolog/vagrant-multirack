@@ -3,3 +3,4 @@ ssh
 nodes
 tmp.yaml
 .vagrant
+.retry

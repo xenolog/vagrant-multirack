@@ -82,7 +82,7 @@ master_node_ipaddr = public_subnets[0].split(".")[0..2].join(".")+".254"
 
 # Create network_metadata for inventory
 network_metadata = {
-  'racks' => [{'as_number' => "65000"}],  # racks numbered from '1'
+  'racks' => [{'as_number' => "65000", 'tor' => master_node_ipaddr}],  # racks numbered from '1'
   'nodes' => {
     master_node_name => {
       'ipaddr' => master_node_ipaddr,
