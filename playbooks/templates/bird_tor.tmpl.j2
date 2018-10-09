@@ -13,8 +13,6 @@ log stderr all;
 # Override router ID
 router id {{$TOR_ipaddr}};
 
-#include "/etc/bird/calico_os_filters.conf";
-
 # Turn on global debugging of all protocols
 debug protocols all;
 
@@ -38,10 +36,6 @@ protocol device {
   scan time 2;    # Scan interfaces every 2 seconds
 }
 
-#<%- @rr_clients.each do |name, ipaddr| -%>
-#include "/etc/bird/peers/compute__<%= name %>.conf";
-#<%- end -%>
-
 # session with master
 protocol bgp 'master-{{$master_ipaddr}}' {
   local as {{$local_asnum}};
@@ -53,17 +47,19 @@ protocol bgp 'master-{{$master_ipaddr}}' {
   next hop self;
 }
 
-# sessions with my RRs
-{{range $i := lsdir "/nodes"}} {{if eq (getv (printf "/nodes/%s/rack_no" $i)) $rack_number}} {{if (exists (printf "/nodes/%s/node_roles/1" $i))}} {{if eq (getv (printf "/nodes/%s/node_roles/1" $i)) "rr"}}
-protocol bgp '{{$i}}' {
+# sessions with nodes of my rack
+{{ range $i := lsdir "/nodes" }} 
+  {{ if eq (getv (printf "/nodes/%s/rack_no" $i)) $rack_number }}
+protocol bgp 'node-{{$i}}' {
   local as {{$local_asnum}};
   neighbor {{getv (printf "/nodes/%s/ipaddr" $i)}} as {{$local_asnum}};
-  description "RR-{{$i}}";
+  description "node-{{$i}}";
   multihop;
   import all;
   export all;
   add paths;     # For ECMP in BGP session with TOR
   next hop self;
 }
-{{end}} {{end}} {{end}} {{end}}
+  {{ end }} 
+{{ end }}
 {% endraw %}

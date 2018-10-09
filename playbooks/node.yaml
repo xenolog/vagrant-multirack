@@ -1,43 +1,9 @@
 ---
 - hosts: all
   tasks:
-  - block:
-    - name: Setup ssh keys
-      file: path=/root/.ssh state=absent
-    - file: path=/root/.ssh state=directory mode=755
-    - copy: dest=/root/.ssh/config content='Host 10.*\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null' mode=644
-    - copy: src=../tmp/ssh/authorized_keys dest=/root/.ssh/authorized_keys mode=644
-
-- hosts: all
-  tasks:
-    - name: Install addition packages
-      apt: name={{item}} state=latest
-      with_items:
-        - traceroute
-        - python-pip
-        - screen
-        - vim
-        - telnet
-        - tcpdump
-        - iperf3
-        - nmap
-        - ethtool
-        - curl
-        - git
-        - dnsutils
-
-    - name: Install ETCDTOOL
-      copy: src=../files/bin/etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755
-
-    - block:
-      - name: Install CONFD
-        copy: src=../files/bin/confd-0.11.0-linux-amd64 dest=/usr/local/bin/confd owner=root mode=755
-      - file: path=/etc/confd state=directory
-      - file: path=/etc/confd/conf.d state=directory
-      - file: path=/etc/confd/templates state=directory
-
-    - name: transfer network_metadata
-      copy: src=../tmp/network_metadata.yaml dest=/etc/network_metadata.yaml
+    - name: waiting for master node setup done
+      pause:
+        minutes: 2 
 
     - block:
       - name: Configure default gateway through TOR
@@ -60,3 +26,23 @@
       - shell: "ifdown {{rack_iface}} ;sleep 1; ifup {{rack_iface}}"
         ignore_errors: True
         when: interfaces_rack_changed.changed
+
+    - block:
+      - name: Install and start BIRD bgpd
+        apt_repository: repo='ppa:cz.nic-labs/bird'
+      - apt: name=bird state=latest update_cache=yes
+      - file: path=/etc/init/bird.override state=absent
+      - copy: src=templates/bird_node.toml.j2 dest=/etc/confd/conf.d/bird_node.toml
+      - copy: src=templates/bird_node.tmpl.j2 dest=/etc/confd/templates/bird_node.tmpl
+      - name: Generate main BIRD config by confd
+        command: confd -onetime -node=http://{{ master_node_ipaddr }}:4001
+        environment:
+          HOSTNAME: "{{ node_name }}"
+          RACK_NUMBER: "{{ rack_number }}"
+        # ignore_errors: True
+      - file: path=/var/log/bird state=directory owner=bird group=bird mode=755
+      - copy: dest=/var/log/bird/master.log content="Use 'journalctl -u bird' for looking log."
+      - name: disable start of bird6 service
+        file: path=/etc/bird/bird6.conf state=absent
+      - service: name=bird6 enabled=no state=stopped
+      - service: name=bird enabled=yes state=reloaded

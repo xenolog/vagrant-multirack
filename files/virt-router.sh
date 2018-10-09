@@ -70,7 +70,11 @@ router_start() {
   # NAT all traffic to external world from this rack
   iptables -t nat -A POSTROUTING -s ${PHY_NET} --out-interface ${OUT_IF} -j MASQUERADE
 
-  # run BIRD bgpd daemon for rack
+  # Accept FORWARD for any traffic
+  iptables -P FORWARD ACCEPT
+  $RUN_IN_NS iptables -P FORWARD ACCEPT
+
+  # run BIRD bgpd daemon for rack  // SHOULD BE LAST in the start()
   source /etc/bird/envvars
   $RUN_IN_NS /usr/sbin/bird ${BIRD_RUNMODE} -u ${BIRD_RUN_USER} -g ${BIRD_RUN_GROUP} -c /etc/bird/bird_tor${RACK_NO}.conf -s /run/bird/bird_tor${RACK_NO}.ctl -P /run/bird/bird_tor${RACK_NO}.pid
 }

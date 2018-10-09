@@ -1,6 +1,9 @@
 # -*- mode: ruby -*-
 
 require "yaml"
+Vagrant.require_version ">= 2.1.5"
+# Upgrade your Vagrant to actual version, please. Do not forget to re-install plugins.
+# https://releases.hashicorp.com/vagrant/${vagrant_ver}/vagrant_${vagrant_ver}_x86_64.deb"
 
 class ::Hash
     def deep_merge(second)
@@ -82,7 +85,7 @@ master_node_ipaddr = public_subnets[0].split(".")[0..2].join(".")+".254"
 
 # Create network_metadata for inventory
 network_metadata = {
-  'racks' => [{'as_number' => "65000"}],  # racks numbered from '1'
+  'racks' => [{'as_number' => "65000", 'tor' => master_node_ipaddr}],  # racks numbered from '1'
   'nodes' => {
     master_node_name => {
       'ipaddr' => master_node_ipaddr,
@@ -139,22 +142,29 @@ Vagrant.configure("2") do |config|
     (1..nodes_per_rack[rack_no]).each do |node_no|
       slave_name = "%s-%02d-%03d" % [node_name_prefix, rack_no, node_no]
       ansible_host_vars[slave_name] = {
-        "node_name"          => slave_name,
-        "master_node_name"   => master_node_name,
-        "master_node_ipaddr" => master_node_ipaddr,
-        "rack_no"            => "'%02d'" % rack_no,
-        "node_no"            => "'%03d'" % node_no,
-        "rack_number"        => rack_no,
-        "rack_iface"         => "eth1",
-        "tor_ipaddr"         => network_metadata['racks'][rack_no]['tor'],
+        "node_name"                  => slave_name,
+        "master_node_name"           => master_node_name,
+        "master_node_ipaddr"         => master_node_ipaddr,
+        "rack_no"                    => "'%02d'" % rack_no,
+        "node_no"                    => "'%03d'" % node_no,
+        "rack_number"                => rack_no,
+        "rack_iface"                 => "eth1",
+        "tor_ipaddr"                 => network_metadata['racks'][rack_no]['tor'],
       }
     end
   end
   ansible_host_vars[master_node_name] = {
-    "node_name"          => "#{master_node_name}",
-    "master_node_name"   => "#{master_node_name}",
-    "master_node_ipaddr" => "#{master_node_ipaddr}",
+    "node_name"                  => "#{master_node_name}",
+    "master_node_name"           => "#{master_node_name}",
+    "master_node_ipaddr"         => "#{master_node_ipaddr}",
   }
+
+  # provision (later) common parts
+  config.vm.provision :ansible, preserve_order: true do |a|
+    a.become = true  # it's a sudo !!!
+    a.playbook = "playbooks/common.yaml"
+    a.host_vars = ansible_host_vars
+  end
 
   # configure Master&router VM
   config.vm.define "#{master_node_name}", primary: true do |master_node|
@@ -201,9 +211,9 @@ Vagrant.configure("2") do |config|
       )
     end
     config.vm.synced_folder ".", "/vagrant", disabled: true
-    # Provisioning (per VM)
-    master_node.vm.provision "provision-master", type: "ansible" do |a|
-      a.sudo = true
+    
+    master_node.vm.provision "provision-master", preserve_order: true, type: "ansible" do |a|
+      a.become = true  # it's a sudo !!!
       a.playbook = "playbooks/master.yaml"
       a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
                                                     "rack_no"     => "'00'",
@@ -211,8 +221,8 @@ Vagrant.configure("2") do |config|
                                                  }})
     end
     (1..num_racks).each do |r|
-      master_node.vm.provision "provision-tor%02d" % r, type: "ansible" do |a|
-        a.sudo = true
+      master_node.vm.provision "provision-tor%02d" % r, preserve_order: true, type: "ansible" do |a|
+        a.become = true  # it's a sudo !!!
         a.playbook = "playbooks/master_rack.yaml"
         a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
                                                       "rack_no"     => "'%02d'" % r,
@@ -259,8 +269,8 @@ Vagrant.configure("2") do |config|
           :libvirt__forward_mode => "none"
         )
 
-        slave_node.vm.provision "provision-#{slave_name}", type: "ansible" do |a|
-          a.sudo = true
+        slave_node.vm.provision "provision-#{slave_name}", preserve_order: true, type: "ansible" do |a|
+          a.become = true  # it's a sudo !!!
           a.playbook = "playbooks/node.yaml"
           a.host_vars = ansible_host_vars
         end

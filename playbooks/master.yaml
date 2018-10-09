@@ -1,35 +1,14 @@
 ---
 - hosts: all
   tasks:
-  - block:
-    - name: Setup ssh keys
-      file: path=/root/.ssh state=absent
-    - file: path=/root/.ssh state=directory mode=755
-    - copy: dest=/root/.ssh/config content='Host 10.*\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null' mode=644
-    - copy: src=../tmp/ssh/{{item.name}} dest=/root/.ssh/ mode={{item.mode}}
-      with_items:
-        - name: authorized_keys
-          mode: 644
-        - name: id_rsa
-          mode: 600
-        - name: id_rsa.pub
-          mode: 644
-
-
-- hosts: all
-  tasks:
-    - name: Install addition packages
-      apt: name={{item}} state=latest
-      with_items:
-        - traceroute
-        - tcpdump
-        - curl
-        - telnet
-        - docker.io
-        - python-docker
-
-    - name: Install ETCDTOOL
-      copy: src=../files/bin/etcdtool dest=/usr/local/bin/ owner=root mode=755
+    - name: Install Docker
+      apt: 
+        name: "{{ packages }}"
+        state: latest
+      vars:
+        packages:
+          - docker.io
+          - python-docker
 
     - block:
       - name: Install and run ETCD
@@ -40,13 +19,6 @@
       - command: systemctl daemon-reload
         when: etcd_unit_installed.changed
       - service: name=etcd enabled=yes state=started
-
-    - block:
-      - name: Install CONFD
-        copy: src=../files/bin/confd-0.11.0-linux-amd64 dest=/usr/local/bin/confd owner=root mode=755
-      - file: path=/etc/confd state=directory
-      - file: path=/etc/confd/conf.d state=directory
-      - file: path=/etc/confd/templates state=directory
 
     - block:
       - name: Install ETCDCTL
@@ -73,34 +45,6 @@
         when: network_metadata_loaded_to_etcd.changed
 
     - block:
-      - name: Setup K8S master node related stuff
-        apt_repository: repo='ppa:ansible/ansible'
-      - apt: name=ansible state=latest update_cache=yes
-      - apt: name={{item}} state=latest
-        with_items:
-          - git
-          - python-setuptools
-          - gcc
-          - python-dev
-          - python-pip
-          - libssl-dev
-          - libffi-dev
-          - software-properties-common
-          - python-netaddr
-      - git: repo=https://github.com/kubernetes-incubator/kargo dest=/root/kargo clone=yes
-
-    - block:
-      - name: Copy customazation-related files
-        #copy: src=../{{item.name}} dest=/root/ {%- if item.mode -%}{{item.mode}}{% endif %}
-        copy: src=../{{item.name}} dest=/root/ mode={{item.mode|default('644')}}
-        with_items:
-          - name: k8s_inventory.py
-            mode: 755
-          - name: k8s_customization.yaml
-            options: ''
-
-
-    - block:
       - name: Install and start BIRD bgpd
         apt_repository: repo='ppa:cz.nic-labs/bird'
       - apt: name=bird state=latest update_cache=yes
@@ -110,8 +54,8 @@
       - name: Generate main BIRD config by confd
         command: confd -onetime
         environment:
-          HOSTNAME: "{{ master_node_name }}"
-        ignore_errors: True
+          HOSTNAME: "{{ node_name }}"
+        # ignore_errors: True
       - file: path=/var/log/bird state=directory owner=bird group=bird mode=755
       - copy: dest=/var/log/bird/master.log content="Use 'journalctl -u bird' for looking log."
       - name: disable start of bird6 service
