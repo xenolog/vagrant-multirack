@@ -1,0 +1,15 @@
+---
+- hosts: all
+  gather_facts: False
+  roles:
+    - common
+
+- hosts: masters
+  gather_facts: False
+  roles:
+    - master
+
+- hosts: nodes
+  gather_facts: False
+  roles:
+    - node

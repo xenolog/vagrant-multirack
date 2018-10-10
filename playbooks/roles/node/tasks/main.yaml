@@ -1,0 +1,42 @@
+---
+- block:
+  - name: Configure default gateway through TOR
+    lineinfile:
+      dest: /etc/network/interfaces
+      line: "      gateway {{tor_ipaddr}}"
+      insertafter: "^iface\\s+{{rack_iface}}\\s+"
+    register: interfaces_rack_changed
+  - replace:
+      dest: /etc/dhcp/dhclient.conf
+      regexp: "(,\\s+routers,)"
+      replace: ","
+    register: dhclient_conf_changed
+  - shell: "ifdown eth0 ;sleep 1; ifup eth0"
+    ignore_errors: True
+    when: dhclient_conf_changed.changed
+  - command: "ip route delete default"
+    ignore_errors: True
+    when: interfaces_rack_changed.changed
+  - shell: "ifdown {{rack_iface}} ;sleep 1; ifup {{rack_iface}}"
+    ignore_errors: True
+    when: interfaces_rack_changed.changed
+
+- block:
+  - name: Install and start BIRD bgpd
+    apt_repository: repo='ppa:cz.nic-labs/bird'
+  - apt: name=bird state=latest update_cache=yes
+  - file: path=/etc/init/bird.override state=absent
+  - copy: src=templates/bird_node.toml.j2 dest=/etc/confd/conf.d/bird_node.toml
+  - copy: src=templates/bird_node.tmpl.j2 dest=/etc/confd/templates/bird_node.tmpl
+  - name: Generate main BIRD config by confd
+    command: confd -onetime -node=http://{{ master_node_ipaddr }}:4001
+    environment:
+      HOSTNAME: "{{ node_name }}"
+      RACK_NUMBER: "{{ rack_number }}"
+    ignore_errors: True
+  - file: path=/var/log/bird state=directory owner=bird group=bird mode=755
+  - copy: dest=/var/log/bird/master.log content="Use 'journalctl -u bird' for looking log."
+  - name: disable start of bird6 service
+    file: path=/etc/bird/bird6.conf state=absent
+  - service: name=bird6 enabled=no state=stopped
+  - service: name=bird enabled=yes state=reloaded

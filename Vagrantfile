@@ -9,6 +9,8 @@ class ::Hash
     end
 end
 
+Vagrant.require_version ">= 2.1.5"
+
 # workaround for https://app.vagrantup.com/boxes/ usage
 # Vagrant::DEFAULT_SERVER_URL.replace('https://vagrantcloud.com')
 
@@ -126,43 +128,60 @@ File.open("tmp/network_metadata.yaml", "w") do |file|
   file.write(network_metadata.to_yaml)
 end
 
+# prepare ansible deployment facts for master and slave nodes
+# This hash should be assembled before run any provisioners for prevent
+# parallel provisioning race conditions
+nodes=[]
+racks=[]
+ansible_host_vars = {}
+(1..num_racks).each do |rack_no|
+  racks << "%d" % rack_no
+  (1..nodes_per_rack[rack_no]).each do |node_no|
+    slave_name = "%s-%02d-%03d" % [node_name_prefix, rack_no, node_no]
+    nodes << slave_name
+    ansible_host_vars[slave_name] = {
+      "ansible_python_interpreter" => "/usr/bin/python3",
+      "node_name"                  => slave_name,
+      "master_node_name"           => master_node_name,
+      "master_node_ipaddr"         => master_node_ipaddr,
+      "rack_no"                    => "'%02d'" % rack_no,
+      "node_no"                    => "'%03d'" % node_no,
+      "rack_number"                => rack_no,
+      "rack_iface"                 => "eth1",
+      "tor_ipaddr"                 => network_metadata['racks'][rack_no]['tor'],
+    }
+  end
+end
+ansible_host_vars[master_node_name] = {
+  "ansible_python_interpreter" => "/usr/bin/python3",
+  "node_name"                  => "#{master_node_name}",
+  "master_node_name"           => "#{master_node_name}",
+  "master_node_ipaddr"         => "#{master_node_ipaddr}",
+}
+
 # Create the lab
+Provisioner = nil
 Vagrant.configure("2") do |config|
   config.ssh.insert_key = false
   config.vm.box = box
 
-  # prepare ansible deployment facts for master and slave nodes
-  # This hash should be assembled before run any provisioners for prevent
-  # parallel provisioning race conditions
-  ansible_host_vars = {}
-  (1..num_racks).each do |rack_no|
-    (1..nodes_per_rack[rack_no]).each do |node_no|
-      slave_name = "%s-%02d-%03d" % [node_name_prefix, rack_no, node_no]
-      ansible_host_vars[slave_name] = {
-        "ansible_python_interpreter" => "/usr/bin/python3",
-        "node_name"                  => slave_name,
-        "master_node_name"           => master_node_name,
-        "master_node_ipaddr"         => master_node_ipaddr,
-        "rack_no"                    => "'%02d'" % rack_no,
-        "node_no"                    => "'%03d'" % node_no,
-        "rack_number"                => rack_no,
-        "rack_iface"                 => "eth1",
-        "tor_ipaddr"                 => network_metadata['racks'][rack_no]['tor'],
-      }
-    end
-  end
-  ansible_host_vars[master_node_name] = {
-    "ansible_python_interpreter" => "/usr/bin/python3",
-    "node_name"                  => "#{master_node_name}",
-    "master_node_name"           => "#{master_node_name}",
-    "master_node_ipaddr"         => "#{master_node_ipaddr}",
-  }
-
-  # provision (later) common parts
+  # This fake ansible provisioner required for creating inventory for
+  # true ansible privisioner, which should be run outside Vagrant
+  # due Vagrant used featured method to run Ansible with unwanted features.
   config.vm.provision :ansible, preserve_order: true do |a|
     a.become = true  # it's a sudo !!!
-    a.playbook = "playbooks/common.yaml"
+    a.playbook = "playbooks/fake.yaml"
+    #a.extra_vars = {}
     a.host_vars = ansible_host_vars
+    a.verbose = true
+    a.limit = "all"  # fake provisioner will be run
+    a.groups = {
+      "nodes"   => nodes,
+      "masters" => [master_node_name],
+      "masters:vars" => {
+        "virt_racks" => racks,
+      },
+    }
   end
 
   # configure Master&router VM
@@ -211,24 +230,24 @@ Vagrant.configure("2") do |config|
     end
     config.vm.synced_folder ".", "/vagrant", disabled: true
     
-    master_node.vm.provision "provision-master", preserve_order: true, type: "ansible" do |a|
-      a.become = true  # it's a sudo !!!
-      a.playbook = "playbooks/master.yaml"
-      a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
-                                                    "rack_no"     => "'00'",
-                                                    "rack_number" => "0",
-                                                 }})
-    end
-    (1..num_racks).each do |r|
-      master_node.vm.provision "provision-tor%02d" % r, preserve_order: true, type: "ansible" do |a|
-        a.become = true  # it's a sudo !!!
-        a.playbook = "playbooks/master_rack.yaml"
-        a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
-                                                      "rack_no"     => "'%02d'" % r,
-                                                      "rack_number" => "#{r}",
-                                                   }})
-      end
-    end
+    # master_node.vm.provision "provision-master", preserve_order: true, type: "ansible" do |a|
+    #   a.become = true  # it's a sudo !!!
+    #   a.playbook = "playbooks/master.yaml"
+    #   a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
+    #                                                 "rack_no"     => "'00'",
+    #                                                 "rack_number" => "0",
+    #                                              }})
+    # end
+    # (1..num_racks).each do |r|
+    #   master_node.vm.provision "provision-tor%02d" % r, preserve_order: true, type: "ansible" do |a|
+    #     a.become = true  # it's a sudo !!!
+    #     a.playbook = "playbooks/master_rack.yaml"
+    #     a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
+    #                                                   "rack_no"     => "'%02d'" % r,
+    #                                                   "rack_number" => "#{r}",
+    #                                                }})
+    #   end
+    # end
   end
 
   # configure Racks VMs
@@ -268,11 +287,11 @@ Vagrant.configure("2") do |config|
           :libvirt__forward_mode => "none"
         )
 
-        slave_node.vm.provision "provision-#{slave_name}", preserve_order: true, type: "ansible" do |a|
-          a.become = true  # it's a sudo !!!
-          a.playbook = "playbooks/node.yaml"
-          a.host_vars = ansible_host_vars
-        end
+        # slave_node.vm.provision "provision-#{slave_name}", preserve_order: true, type: "ansible" do |a|
+        #   a.become = true  # it's a sudo !!!
+        #   a.playbook = "playbooks/node.yaml"
+        #   a.host_vars = ansible_host_vars
+        # end
       end
     end
   end
