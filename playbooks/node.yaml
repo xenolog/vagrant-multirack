@@ -1,44 +1,6 @@
 ---
 - hosts: all
   tasks:
-  - block:
-    - name: Setup ssh keys
-      file: path=/root/.ssh state=absent
-    - file: path=/root/.ssh state=directory mode=755
-    - copy: dest=/root/.ssh/config content='Host 10.*\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null' mode=644
-    - copy: src=../tmp/ssh/authorized_keys dest=/root/.ssh/authorized_keys mode=644
-
-- hosts: all
-  tasks:
-    - name: Install addition packages
-      apt: name={{item}} state=latest
-      with_items:
-        - traceroute
-        - vim
-        - telnet
-        - tcpdump
-        - iperf3
-        - nmap
-        - ethtool
-        - curl
-        # - git
-        # - dnsutils
-        # - python-pip
-        # - screen
-
-    - name: Install ETCDTOOL
-      copy: src=../files/bin/etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755
-
-    - block:
-      - name: Install CONFD
-        copy: src=../files/bin/confd-0.16.0-linux-amd64 dest=/usr/local/bin/confd owner=root mode=755
-      - file: path=/etc/confd state=directory
-      - file: path=/etc/confd/conf.d state=directory
-      - file: path=/etc/confd/templates state=directory
-
-    - name: transfer network_metadata
-      copy: src=../tmp/network_metadata.yaml dest=/etc/network_metadata.yaml
-
     - block:
       - name: Configure default gateway through TOR
         lineinfile:
@@ -61,9 +23,6 @@
         ignore_errors: True
         when: interfaces_rack_changed.changed
 
-
-- hosts: all
-  tasks:
     - block:
       - name: Install and start BIRD bgpd
         apt_repository: repo='ppa:cz.nic-labs/bird'

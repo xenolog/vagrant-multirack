@@ -1,0 +1,45 @@
+---
+- hosts: all
+  tasks:
+    - block:
+      - name: Setup ssh keys
+        file: path=/root/.ssh state=absent
+      - file: path=/root/.ssh state=directory mode=755
+      - copy: dest=/root/.ssh/config content='Host 10.*\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null' mode=644
+      - copy: src=../tmp/ssh/{{item.name}} dest=/root/.ssh/ mode={{item.mode}}
+        with_items:
+          - name: authorized_keys
+            mode: 644
+          - name: id_rsa
+            mode: 600
+          - name: id_rsa.pub
+            mode: 644
+
+    - block:
+      - name: Install addition packages
+        apt: 
+          name: "{{ packages }}"
+          state: latest
+        vars:
+          packages:
+            - traceroute
+            - tcpdump
+            - curl
+            - telnet
+            - vim
+            - iperf3
+            - nmap
+            - ethtool
+      - name: Install ETCDTOOL
+        copy: src=../files/bin/etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755
+
+    - block:
+      - name: Install CONFD
+        copy: src=../files/bin/confd-0.16.0-linux-amd64 dest=/usr/local/bin/confd owner=root mode=755
+      - file: path=/etc/confd state=directory
+      - file: path=/etc/confd/conf.d state=directory
+      - file: path=/etc/confd/templates state=directory
+
+    - name: transfer network_metadata
+      copy: src=../tmp/network_metadata.yaml dest=/etc/network_metadata.yaml
+
