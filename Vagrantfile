@@ -18,7 +18,7 @@ ENV["VAGRANT_DEFAULT_PROVIDER"] = "libvirt"
 prefix = pool.gsub(/\.\d+\.\d+\/\d\d$/, "")
 
 # Boxes with libvirt provider support:
-box = ENV["VAGRANT_MR_BOX"] || "adidenko/ubuntu-1604-k8s" 
+box = ENV["VAGRANT_MR_BOX"] || "generic/ubuntu1604" 
 
 num_racks = (ENV["VAGRANT_MR_NUM_OF_RACKS"] || "2").to_i
 base_as_number = (ENV["VAGRANT_MR_BASE_AS_NUMBER"] || "65000").to_i
@@ -139,21 +139,23 @@ Vagrant.configure("2") do |config|
     (1..nodes_per_rack[rack_no]).each do |node_no|
       slave_name = "%s-%02d-%03d" % [node_name_prefix, rack_no, node_no]
       ansible_host_vars[slave_name] = {
-        "node_name"          => slave_name,
-        "master_node_name"   => master_node_name,
-        "master_node_ipaddr" => master_node_ipaddr,
-        "rack_no"            => "'%02d'" % rack_no,
-        "node_no"            => "'%03d'" % node_no,
-        "rack_number"        => rack_no,
-        "rack_iface"         => "eth1",
-        "tor_ipaddr"         => network_metadata['racks'][rack_no]['tor'],
+        "ansible_python_interpreter" => "/usr/bin/python3",
+        "node_name"                  => slave_name,
+        "master_node_name"           => master_node_name,
+        "master_node_ipaddr"         => master_node_ipaddr,
+        "rack_no"                    => "'%02d'" % rack_no,
+        "node_no"                    => "'%03d'" % node_no,
+        "rack_number"                => rack_no,
+        "rack_iface"                 => "eth1",
+        "tor_ipaddr"                 => network_metadata['racks'][rack_no]['tor'],
       }
     end
   end
   ansible_host_vars[master_node_name] = {
-    "node_name"          => "#{master_node_name}",
-    "master_node_name"   => "#{master_node_name}",
-    "master_node_ipaddr" => "#{master_node_ipaddr}",
+    "ansible_python_interpreter" => "/usr/bin/python3",
+    "node_name"                  => "#{master_node_name}",
+    "master_node_name"           => "#{master_node_name}",
+    "master_node_ipaddr"         => "#{master_node_ipaddr}",
   }
 
   # configure Master&router VM
