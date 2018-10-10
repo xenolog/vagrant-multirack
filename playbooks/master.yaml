@@ -26,7 +26,7 @@
         - curl
         - telnet
         - docker.io
-        - python-docker
+        - python3-docker
 
     - name: Install ETCDTOOL
       copy: src=../files/bin/etcdtool dest=/usr/local/bin/ owner=root mode=755

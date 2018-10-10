@@ -204,7 +204,7 @@ Vagrant.configure("2") do |config|
     end
     config.vm.synced_folder ".", "/vagrant", disabled: true
     # Provisioning (per VM)
-    master_node.vm.provision "provision-master", type: "ansible" do |a|
+    master_node.vm.provision "provision-master", preserve_order: true, type: "ansible" do |a|
       a.sudo = true
       a.playbook = "playbooks/master.yaml"
       a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
@@ -213,7 +213,7 @@ Vagrant.configure("2") do |config|
                                                  }})
     end
     (1..num_racks).each do |r|
-      master_node.vm.provision "provision-tor%02d" % r, type: "ansible" do |a|
+      master_node.vm.provision "provision-tor%02d" % r, preserve_order: true, type: "ansible" do |a|
         a.sudo = true
         a.playbook = "playbooks/master_rack.yaml"
         a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
@@ -261,7 +261,7 @@ Vagrant.configure("2") do |config|
           :libvirt__forward_mode => "none"
         )
 
-        slave_node.vm.provision "provision-#{slave_name}", type: "ansible" do |a|
+        slave_node.vm.provision "provision-#{slave_name}", preserve_order: true, type: "ansible" do |a|
           a.sudo = true
           a.playbook = "playbooks/node.yaml"
           a.host_vars = ansible_host_vars
