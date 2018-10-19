@@ -3,7 +3,7 @@
   - name: Configure default gateway through TOR
     lineinfile:
       dest: /etc/network/interfaces
-      line: "      gateway {{tor_ipaddr}}"
+      line: "      gateway {{rack_gateway}}"
       insertafter: "^iface\\s+{{rack_iface}}\\s+"
     register: interfaces_rack_changed
   - replace:
@@ -32,8 +32,6 @@
     command: confd -onetime -node=http://{{ master_node_ipaddr }}:4001
     environment:
       HOSTNAME: "{{ node_name }}"
-      RACK_NUMBER: "{{ rack_number }}"
-    ignore_errors: True
   - file: path=/var/log/bird state=directory owner=bird group=bird mode=755
   - copy: dest=/var/log/bird/master.log content="Use 'journalctl -u bird' for looking log."
   - name: disable start of bird6 service

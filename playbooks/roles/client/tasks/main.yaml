@@ -1,0 +1,29 @@
+---
+- block:
+  - name: Configure default gateway through Public network
+    lineinfile:
+      dest: /etc/network/interfaces
+      line: "      gateway {{public_gateway}}"
+      insertafter: "^iface\\s+{{rack_iface}}\\s+"
+    register: interfaces_rack_changed
+  - name: Configure route for VIPs
+    lineinfile:
+      dest: /etc/network/interfaces
+      line: "      post-up ip route add {{vip_pool}} via {{master_node_ipaddr}} || true"
+      insertafter: "^iface\\s+{{rack_iface}}\\s+"
+    register: interfaces_rack_changed
+  - replace:
+      dest: /etc/dhcp/dhclient.conf
+      regexp: "(,\\s+routers,)"
+      replace: ","
+    register: dhclient_conf_changed
+  - shell: "ifdown eth0 ;sleep 1; ifup eth0"
+    ignore_errors: True
+    when: dhclient_conf_changed.changed
+  - command: "ip route delete default"
+    ignore_errors: True
+    when: interfaces_rack_changed.changed
+  - shell: "ifdown {{rack_iface}} ;sleep 1; ifup {{rack_iface}}"
+    ignore_errors: True
+    when: interfaces_rack_changed.changed
+
