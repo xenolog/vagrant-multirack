@@ -5,18 +5,7 @@ Scripts to:
 * Create libvirt lab with multi-rack network topology with Ubuntu 16.04 on the nodes.
 
 Often developer need lab for emulate amount of nodes, located into
-defferent racks with no L2 connectivity between racks. Typical scheme of clean lab is
-
-![Network_topology](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/Typical_multirack.svg)
-
-For example, k8s multi-rack deployment with AS per rack topology and Calico usage may look
-
-![Network_topology](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/Typical_multirack_k8s_calico.svg)
-
-Into KVM virtual environment this network topology will be implemented as:
-
-![Implementation scheme](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/VENV_multirack.svg)
-
+defferent racks with no L2 connectivity between racks.
 
 Requirements
 ------------

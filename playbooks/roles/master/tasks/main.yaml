@@ -64,22 +64,22 @@
 
 - name: Virtual router main script
   block:
-  - copy: src=virt-router.sh dest=/usr/local/bin/virt-router.sh
+  - copy: src="virt-router.sh" dest="/usr/local/bin/virt-router.sh"
     register: virt_router_installed
   - file: path=/usr/local/bin/virt-router.sh mode=755
     when: virt_router_installed.changed
   - name: Virtual router unit
-    template: src="tor_systemd_unit.j2" dest="/etc/systemd/system/tor@.service"
+    copy: src="tor_systemd.unit" dest="/etc/systemd/system/tor@.service"
     register: virt_router_unit_installed
   - command: systemctl daemon-reload
     when: virt_router_unit_installed.changed
 
-- name: Vartual racks
-  debug: 
-    msg: "{{virt_racks}}"
+# - name: Vartual racks
+#   debug: 
+#     msg: "{{virt_racks}}"
 
-- name: Configure virtual TOR
-  include_tasks: rack.yaml
-  loop: "{{virt_racks|unique}}"
-  loop_control:
-    loop_var: rack_number
+# - name: Configure virtual TOR
+#   include_tasks: rack.yaml
+#   loop: "{{virt_racks|unique}}"
+#   loop_control:
+#     loop_var: rack_number
