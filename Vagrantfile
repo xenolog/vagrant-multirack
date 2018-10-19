@@ -81,6 +81,8 @@ end
 
 master_node_name = "%s-000" % [node_name_prefix]
 master_node_ipaddr = public_subnets[0].split(".")[0..2].join(".")+".254"
+client_node_name = "%s-client" % [node_name_prefix]
+client_node_ipaddr = public_subnets[0].split(".")[0..2].join(".")+".253"
 
 # Create network_metadata for inventory
 network_metadata = {
@@ -158,9 +160,14 @@ ansible_host_vars[master_node_name] = {
   "master_node_name"           => "#{master_node_name}",
   "master_node_ipaddr"         => "#{master_node_ipaddr}",
 }
+ansible_host_vars[client_node_name] = {
+  "ansible_python_interpreter" => "/usr/bin/python3",
+  "node_name"                  => "#{client_node_name}",
+  "master_node_name"           => "#{master_node_name}",
+  "master_node_ipaddr"         => "#{master_node_ipaddr}",
+}
 
 # Create the lab
-Provisioner = nil
 Vagrant.configure("2") do |config|
   config.ssh.insert_key = false
   config.vm.box = box
@@ -230,24 +237,43 @@ Vagrant.configure("2") do |config|
     end
     config.vm.synced_folder ".", "/vagrant", disabled: true
     
-    # master_node.vm.provision "provision-master", preserve_order: true, type: "ansible" do |a|
-    #   a.become = true  # it's a sudo !!!
-    #   a.playbook = "playbooks/master.yaml"
-    #   a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
-    #                                                 "rack_no"     => "'00'",
-    #                                                 "rack_number" => "0",
-    #                                              }})
-    # end
-    # (1..num_racks).each do |r|
-    #   master_node.vm.provision "provision-tor%02d" % r, preserve_order: true, type: "ansible" do |a|
-    #     a.become = true  # it's a sudo !!!
-    #     a.playbook = "playbooks/master_rack.yaml"
-    #     a.host_vars = ansible_host_vars.deep_merge({"#{master_node_name}" => {
-    #                                                   "rack_no"     => "'%02d'" % r,
-    #                                                   "rack_number" => "#{r}",
-    #                                                }})
-    #   end
-    # end
+  end
+
+  # configure Client node VM
+  config.vm.define "#{client_node_name}" do |client_node|
+    master_node.vm.hostname = "#{client_node_name}"
+    # Libvirt provider settings
+    master_node.vm.provider(:libvirt) do |domain|
+      domain.uri = "qemu+unix:///system"
+      domain.memory = master_memory
+      domain.cpus = master_cpus
+      domain.driver = "kvm"
+      domain.host = "localhost"
+      domain.connect_via_ssh = false
+      domain.username = user
+      domain.storage_pool_name = "default"
+      domain.nic_model_type = "e1000"
+      domain.management_network_name = "mr_#{node_name_prefix}_vagrant"
+      domain.management_network_address = "#{vagrant_cidr}"
+      domain.nested = true
+      domain.cpu_mode = "host-passthrough"
+      domain.volume_cache = "unsafe"
+      domain.disk_bus = "virtio"
+      # DISABLED: switched to new box which has 100G / partition
+      #domain.storage :file, :type => "qcow2", :bus => "virtio", :size => "20G", :device => "vdb"
+    end
+    ### Networks and interfaces
+    # "public" network with nat forwarding
+    master_node.vm.network(:private_network,
+      :ip => master_node_ipaddr,
+      :libvirt__host_ip => public_subnets[0].split(".")[0..2].join(".")+".1",
+      :model_type => "e1000",
+      :libvirt__network_name => "mr_#{node_name_prefix}_public",
+      :libvirt__dhcp_enabled => false,
+      :libvirt__forward_mode => "nat"
+    )
+    config.vm.synced_folder ".", "/vagrant", disabled: true
+    
   end
 
   # configure Racks VMs
@@ -287,11 +313,6 @@ Vagrant.configure("2") do |config|
           :libvirt__forward_mode => "none"
         )
 
-        # slave_node.vm.provision "provision-#{slave_name}", preserve_order: true, type: "ansible" do |a|
-        #   a.become = true  # it's a sudo !!!
-        #   a.playbook = "playbooks/node.yaml"
-        #   a.host_vars = ansible_host_vars
-        # end
       end
     end
   end
