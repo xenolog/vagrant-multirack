@@ -1,6 +1,6 @@
 {{$hostname := getenv "HOSTNAME" }}## hostname: {{$hostname}}
 {{$local_ipaddr := getv (printf "/nodes/%s/ipaddr/0" $hostname) }}## local_ipaddr: {{$local_ipaddr}}
-{{$local_asnum := getv (printf "/nodes/%s/as_number" $hostname) }}## local_asnum: {{$local_asnum}}
+{{$local_asnum := getv "/racks/0/as_number"}}## local_asnum: {{$local_asnum}}
 
 # Configure logging
 #log syslog { debug, trace, info, remote, warning, error, auth, fatal, bug };
@@ -51,7 +51,7 @@ protocol device {
   {{ if ne $r "0" }} 
 protocol bgp 'TOR-{{$r}}' {
   local as {{$local_asnum}};
-  neighbor {{getv (printf "/racks/%s/tor" $r)}} as {{getv (printf "/racks/%s/as_number" $r)}};
+  neighbor {{getv (printf "/racks/%s/tor" $r)}} as {{$local_asnum}};
   description "TOR-{{$r}}";
   import all;
   export all;

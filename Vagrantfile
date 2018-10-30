@@ -73,7 +73,6 @@ network_metadata = {
     master_node_name => {
       'ipaddr' => master_node_ipaddr,
       'node_roles' => ['master'],
-      'as_number'  => "65000",
       'rack_no'    => "0",
     },
   },
@@ -84,7 +83,6 @@ router_if_shift = 1
   network_metadata['racks'] << {
     'subnet' => rack_subnets[rack_no],
     'tor'    => rack_subnets[rack_no].split(".")[0..2].join(".")+".254",
-    'as_number' => base_as_number+rack_no,
     'phy_if' => "eth#{rack_no+router_if_shift}",
     'veth' => [
       "#{transit_subnet}.#{rack_no*4+1}",
@@ -94,9 +92,7 @@ router_if_shift = 1
 end
 network_metadata["nodes"][client_node_name] = {
   'ipaddr'     => [client_node_ipaddr],
-#  'gateway'    => ["#{subnet1_part}.254","#{subnet2_part}.254"],
   'node_roles' => ['general','client'],
-  'as_number'  => 0,
   'rack_no'    => 0,
 }
 subnet1_part = rack_subnets[1].split(".")[0..2].join(".")
@@ -105,7 +101,6 @@ network_metadata["nodes"][server_node_name] = {
   'ipaddr'     => ["#{subnet1_part}.1","#{subnet2_part}.1"],
   'gateway'    => ["#{subnet1_part}.254","#{subnet2_part}.254"],
   'node_roles' => ['general','server'],
-  'as_number'  => base_as_number+3,
   'rack_no'    => 12,
 }
 
@@ -129,10 +124,6 @@ ansible_host_vars[server_node_name] = {
   "node_name"                  => server_node_name,
   "rack_iface"                 => "eth1",
   "rack_gateway"               => network_metadata['nodes'][server_node_name]['gateway'][0],
-#  "rack_no"                    => "'%02d'" % rack_no,
-#  "node_no"                    => "'%03d'" % node_no,
-#  "rack_number"                => rack_no,
-#  "tor_ipaddr"                 => network_metadata['racks'][rack_no]['tor'],
 }
 ansible_host_vars[master_node_name] = {
   "ansible_python_interpreter" => "/usr/bin/python3",

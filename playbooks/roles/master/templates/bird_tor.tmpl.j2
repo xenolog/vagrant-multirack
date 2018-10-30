@@ -4,7 +4,7 @@
 {{$TOR_ipaddr := getv (printf "/racks/%s/tor" $rack_number)}}## TOR_ipaddr: {{$TOR_ipaddr}}
 {{$master_ipaddr := getv (printf "/racks/%s/veth/0" $rack_number)}}## master_ipaddr: {{$master_ipaddr}}
 {{$master_asnum := getv "/racks/0/as_number"}}## master_asnum: {{$master_asnum}}
-{{$local_asnum := getv (printf "/racks/%s/as_number" $rack_number)}}## local_asnum: {{$local_asnum}}
+{{$local_asnum := getv "/racks/0/as_number"}}## local_asnum: {{$local_asnum}}
 
 # Configure logging
 #log syslog { debug, trace, info, remote, warning, error, auth, fatal, bug };
@@ -52,7 +52,7 @@ protocol bgp 'master-{{$master_ipaddr}}' {
   {{ if eq (getv (printf "/nodes/%s/rack_no" $node)) "12" }}
 protocol bgp 'server-link' {
   local as {{$local_asnum}};
-  neighbor {{getv (printf "/nodes/%s/ipaddr/%d" $node (sub (atoi $rack_number) 1))}} as {{getv (printf "/nodes/%s/as_number" $node)}};
+  neighbor {{getv (printf "/nodes/%s/ipaddr/%d" $node (sub (atoi $rack_number) 1))}} as {{$local_asnum}};
   description "server-link";
   # multihop;
   import all;
