@@ -48,8 +48,8 @@
   - apt_repository: repo='ppa:cz.nic-labs/bird'
   - apt: name=bird state=latest update_cache=yes
   - file: path=/etc/init/bird.override state=absent
-  - copy: src=templates/bird_master.toml.j2 dest=/etc/confd/conf.d/bird.toml
-  - copy: src=templates/bird_master.tmpl.j2 dest=/etc/confd/templates/bird.tmpl
+  - copy: src=bird_master.toml dest=/etc/confd/conf.d/bird.toml
+  - copy: src=bird_master.tmpl dest=/etc/confd/templates/bird.tmpl
   - name: Generate main BIRD config by confd
     command: confd -onetime
     environment:
@@ -69,7 +69,7 @@
   - file: path=/usr/local/bin/virt-router.sh mode=755
     when: virt_router_installed.changed
   - name: Virtual router unit
-    template: src="tor_systemd_unit.j2" dest="/etc/systemd/system/tor@.service"
+    copy: src=tor_unit.service dest=/etc/systemd/system/tor@.service
     register: virt_router_unit_installed
   - command: systemctl daemon-reload
     when: virt_router_unit_installed.changed

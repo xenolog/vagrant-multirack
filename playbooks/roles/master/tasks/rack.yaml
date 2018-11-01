@@ -3,12 +3,4 @@
   - name: RACK-NO
     debug:
       msg: "{{rack_number}}"
-  - name: TOR bgpd config templates for CONFD
-    template: src="templates/bird_tor.toml.j2" dest="/etc/confd/conf.d/bird_tor{{"%02d"|format(rack_number|int)}}.toml"
-  - template: src="templates/bird_tor.tmpl.j2" dest="/etc/confd/templates/bird_tor{{"%02d"|format(rack_number|int)}}.tmpl"
-  - name: Generate bird config for rack-{{"%02d"|format(rack_number|int)}}
-    command: confd -onetime
-    environment:
-      HOSTNAME: "{{ master_node_name }}"
-    ignore_errors: True
   - service: name=tor@{{rack_number}} enabled=yes state=started

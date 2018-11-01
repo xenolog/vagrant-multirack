@@ -1,12 +1,9 @@
 [Unit]
-Description=Virtual TOR into network namespace
-After=docker.service
-Requires=docker.service
-Requires=bird.service
+Description=Virtual TOR
+After=bird.service
+After=network.target
 
 [Service]
-#Type=oneshot
-#RemainAfterExit=yes
 TimeoutStartSec=2
 Environment=RACK_NO=%i SYSTEMD=1
 ExecStartPre=-/usr/local/bin/virt-router.sh stop
