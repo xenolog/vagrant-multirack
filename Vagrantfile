@@ -194,6 +194,7 @@ Vagrant.configure("2") do |config|
         "client_node_name"   => client_node_name,
         "client_node_ipaddr" => client_node_ipaddr,
         "vip_pool" => vip_pool,
+        "as_number" => base_as_number,
       },
     }
   end

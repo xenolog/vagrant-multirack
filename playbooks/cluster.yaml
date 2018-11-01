@@ -9,6 +9,11 @@
   roles:
     - master
 
+- hosts: clients
+  gather_facts: False
+  roles:
+    - client
+
 - hosts: nodes
   gather_facts: False
   roles:
