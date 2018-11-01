@@ -5,35 +5,45 @@ Scripts to:
 * Create libvirt lab with multi-rack network topology with Ubuntu 16.04 on the nodes.
 
 Often developer need lab for emulate amount of nodes, located into
-defferent racks with no L2 connectivity between racks. Typical scheme of clean lab is
+defferent racks with no L2 connectivity between racks. This lab implements case where using ExaBGP as iBGP announcer. One AS used as whole env. TOR switches a classic L2 switches without any L3 functionality
 
-![Network_topology](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/Typical_multirack.svg)
+![Network_topology](https://raw.githubusercontent.com/xenolog/vagrant-multirack/test_exabgp_ibgp/img/LAB_for_ExaBGP.svg?sanitize=true)
 
-For example, k8s multi-rack deployment with AS per rack topology and Calico usage may look
+The features of this LAB:
 
-![Network_topology](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/Typical_multirack_k8s_calico.svg)
+* One AS per rack, iBGP will be used
+* BGP speaker on the nodes is only announcer. It does not receive any route information from Core router or neighboors.
+* The TOR switches works only on L2 level. "L2 per rack" means, that 802.1q vlan inside rack terminated on the TOR and converted to vxlan or another method of L2 virtualization.  The only Core router is gateway for nodes, not a TOR !!! 
 
-Into KVM virtual environment this network topology will be implemented as:
 
-![Implementation scheme](https://cdn.rawgit.com/xenolog/vagrant-multirack/master/img/VENV_multirack.svg)
+Typical server for this lab is:
+
+![Network_topology](https://raw.githubusercontent.com/xenolog/vagrant-multirack/test_exabgp_ibgp/img/LAB_for_ExaBGP__server.svg?sanitize=true)
 
 
 Requirements
 ------------
 
 * `libvirt`
-* `ansible v2.1+`
-* `vagrant`
+* `ansible v2.7+`
+* `vagrant v2.1.5+`
 * `vagrant-libvirt` plugin (`vagrant plugin install vagrant-libvirt`)
 * `$USER` should be able to connect to libvirt (test with `virsh list --all`)
 
-Vargant lab preparation
------------------------
+LAB preparation
+---------------
 
 * Change default IP pool for vagrant networks if you want
 
 ```bash
 export VAGRANT_MR_POOL="10.100.0.0/16"
+
+```
+
+* Define pool for VIP addresses.
+
+```bash
+export VAGRANT_MR_VIP_POOL="10.10.0.0/24"
 
 ```
 
@@ -47,17 +57,24 @@ cd vagrant-multirack
 * Prepare the virtual lab
 
 ```bash
-vagrant up
+./cluster.sh create
+```
+
+You can define variable VAGRANT_MR_NO_PROVISION to prevent nodes provision. Only blank VMs and networks will be created. It may be helpful for creating snapshot of virt lab and run provisioning by direct ansible run. In this case Ansible will be run by Vagrant with fake provisioning file for creating true inventory file.
+
+
+* Destroy the virtual lab
+
+```bash
+./cluster.sh destroy
 ```
 
 By default will be deployed environmert, contains:
 
-* Master node, prepared for run `kargo`
+* Master node (combined with core router)
 * two racks
-* two nodes per rack
-* First node of each rack is a k8s control-plane node.
-* First node of each rack contains RouteReflector container.
-* virtual TORs implemented as network namespaces into master node VM
+* two server nodes into 1st rack
+* one server node into 2nd rack
 
 You able to re-define following default constants:
 
@@ -71,38 +88,11 @@ You able to re-define following default constants:
 * VAGRANT_MR_RACK{N}\_CP\_NODES -- specify nodes which will used for control plane (in the 1,2,3 format).
 * VAGRANT_MR_RACK{N}_CIDR -- specify CIDR for network inside rack
 * VAGRANT_MR_RACK{N}_AS_NUMBER -- specify rack AS number
-* VAGRANT_MR_MASTER_MEMORY -- amount of memory for master node (default: 4096)
-* VAGRANT_MR_MASTER_CPUS -- amount of CPUs for master node (default: 2)
-* VAGRANT_MR_NODE_MEMORY -- amount of memory for nodes (default: 2048)
+* VAGRANT_MR_MASTER_MEMORY -- amount of memory for master node (default: 1024)
+* VAGRANT_MR_MASTER_CPUS -- amount of CPUs for master node (default: 1)
+* VAGRANT_MR_NODE_MEMORY -- amount of memory for nodes (default: 1024)
 * VAGRANT_MR_NODE_CPUS -- amount of CPUs for nodes (default: 1)
+* VAGRANT_MR_CLIENT_MEMORY -- amount of memory for client node (default: 1024)
+* VAGRANT_MR_CLIENT_CPUS -- amount of CPUs for client node (default: 1)
+* VAGRANT_MR_NO_PROVISION -- may be defined to prevent provisioning nodes. It helpfull to debug purpose.
 
-
-Deployment Kubernetes on your lab
----------------------------------
-
-* Login to master node and sudo to root
-
-```bash
-vagrant ssh $USER-000 -c 'sudo -i'
-```
-
-* Set env vars for dynamic inventory
-
-```bash
-export INVENTORY=/root/k8s_inventory.py
-export K8S_NETWORK_METADATA=/etc/network_metadata.yaml
-```
-
-* Check customization configuration into `/root/k8s_customization.yaml` file
-
-* Check `nodes` list and make sure you have SSH access to them
-
-```bash
-ansible all -m ping -i $INVENTORY
-```
-
-* Deploy k8s using kargo playbooks
-
-```bash
-ansible-playbook -i $INVENTORY /root/kargo/cluster.yml -e @/root/k8s_customization.yaml
-```
