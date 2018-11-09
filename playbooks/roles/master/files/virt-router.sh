@@ -7,6 +7,7 @@ fi
 HOSTNAME=`hostname`
 USAGE="Usage: $0 {start|stop}";
 
+RACK_NO_SHORT=`printf "%d" $RACK_NO`
 RACK_NO=`printf "%02d" $RACK_NO`
 if [[ "${RACK_NO}" == "00" ]] ; then
   echo 'RACK_NO undefined, please define it as integer 1..253'
@@ -36,6 +37,7 @@ router_start() {
 
   # Accept FORWARD for any traffic
   iptables -P FORWARD ACCEPT
+  echo $?
 }
 
 router_stop() {
@@ -45,6 +47,7 @@ router_stop() {
 
   ip a flush dev $PHY_IF
   ip l set down $PHY_IF
+  echo $?
 }
 
 # main

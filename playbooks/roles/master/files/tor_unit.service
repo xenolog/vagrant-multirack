@@ -4,8 +4,10 @@ After=bird.service
 After=network.target
 
 [Service]
+Type=oneshot
+RemainAfterExit=yes
 TimeoutStartSec=2
-Environment=RACK_NO=%i SYSTEMD=1
+Environment=RACK_NO=%i SYSTEMD=1 DEBUG=1
 ExecStartPre=-/usr/local/bin/virt-router.sh stop
 ExecStart=/usr/local/bin/virt-router.sh start
 ExecStop=/usr/local/bin/virt-router.sh stop

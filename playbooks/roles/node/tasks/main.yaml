@@ -24,10 +24,10 @@
 - block:
   - name: Install and start BIRD bgpd
     apt_repository: repo='ppa:cz.nic-labs/bird'
-  - apt: name=bird state=latest update_cache=yes
+  - package: name=bird state=latest update_cache=yes
   - file: path=/etc/init/bird.override state=absent
-  - copy: src=templates/bird_node.toml.j2 dest=/etc/confd/conf.d/bird_node.toml
-  - copy: src=templates/bird_node.tmpl.j2 dest=/etc/confd/templates/bird_node.tmpl
+  - copy: src=bird_node.toml dest=/etc/confd/conf.d/bird_node.toml
+  - copy: src=bird_node.tmpl dest=/etc/confd/templates/bird_node.tmpl
   - name: Generate main BIRD config by confd
     command: confd -onetime -node=http://{{ master_node_ipaddr }}:4001
     environment:
@@ -40,3 +40,14 @@
     file: path=/etc/bird/bird6.conf state=absent
   - service: name=bird6 enabled=no state=stopped
   - service: name=bird enabled=yes state=reloaded
+
+- name: Install and configure NGiNX
+  block:
+  - package:
+      name: nginx-light
+      state: present
+  - lineinfile:
+      dest: /etc/nginx/nginx.conf
+      line: "        add_header X-Backend-Server $hostname;"
+      insertafter: "^http\\s+{"
+    notify: reload_nginx
