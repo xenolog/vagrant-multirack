@@ -16,12 +16,13 @@ Vagrant.require_version ">= 2.1.5"
 
 pool = ENV["VAGRANT_MR_POOL"] || "10.250.0.0/16"
 vip_pool = ENV["VAGRANT_MR_VIP_POOL"] || "10.10.0.0/24"
+vip1 = ENV["VAGRANT_MR_VIP1"] || "10.10.0.10"
 
 ENV["VAGRANT_DEFAULT_PROVIDER"] = "libvirt"
 prefix = pool.gsub(/\.\d+\.\d+\/\d\d$/, "")
 
 # Boxes with libvirt provider support:
-box = ENV["VAGRANT_MR_BOX"] || "generic/ubuntu1604" 
+box = ENV["VAGRANT_MR_BOX"] || "generic/ubuntu1604"
 
 num_racks = (ENV["VAGRANT_MR_NUM_OF_RACKS"] || "2").to_i
 user = ENV["USER"]
@@ -59,6 +60,7 @@ print("### ENV:\n" +
       "    client node CPU: #{client_cpus}\n"+
       "     control subnet: #{vagrant_cidr}\n"+
       "      public subnet: #{public_subnet}\n"+
+      "           demo VIP: #{vip1}\n" +
       "         VIP subnet: #{vip_pool}\n")
 
 (1..num_racks).each do |rack_no|
@@ -194,6 +196,7 @@ Vagrant.configure("2") do |config|
         "client_node_name"   => client_node_name,
         "client_node_ipaddr" => client_node_ipaddr,
         "vip_pool" => vip_pool,
+        "vip1" => vip1,
         "as_number" => base_as_number,
       },
     }
@@ -244,7 +247,7 @@ Vagrant.configure("2") do |config|
       )
     end
     config.vm.synced_folder ".", "/vagrant", disabled: true
-    
+
   end
 
   # configure Client node VM

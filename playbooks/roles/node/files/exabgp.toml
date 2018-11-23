@@ -1,7 +1,7 @@
 [template]
 prefix = "/network_metadata"
-src = "bird_node.tmpl"
-dest = "/etc/bird/bird.conf"
+src = "exabgp.tmpl"
+dest = "/etc/exabgp/exabgp.conf"
 owner = "root"
 mode = "0644"
 keys = [

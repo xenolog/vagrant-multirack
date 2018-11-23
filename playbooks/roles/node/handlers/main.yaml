@@ -4,3 +4,5 @@
       name: nginx
       enabled: yes
       state: restarted
+  - name: reload_systemd_units
+    command: systemctl daemon-reload

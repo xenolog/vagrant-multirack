@@ -1,0 +1,28 @@
+{{$rack_no := getenv "RACK_NUMBER" }}## rack_no: {{$rack_no}}
+{{$hostname := getenv "HOSTNAME" }}## hostname: {{$hostname}}
+{{$local_ipaddr := getv (printf "/nodes/%s/ipaddr" $hostname) }}## local_ipaddr: {{$local_ipaddr}}
+{{$local_asnum := getv "/racks/0/as_number"}}## local_asnum: {{$local_asnum}}
+{{$TOR_ipaddr := getv (printf "/racks/%s/tor" $rack_no)}}## TOR_ipaddr: {{$TOR_ipaddr}}
+
+process service-nginx {
+    run python3 -m exabgp healthcheck --config=/etc/exabgp/ch_nginx.conf;
+    encoder text;
+}
+
+neighbor {{$TOR_ipaddr}} {
+    description "TOR-{{$TOR_ipaddr}}";
+    router-id {{$local_ipaddr}};
+    local-address {{$local_ipaddr}};
+    local-as {{$local_asnum}};
+    peer-as {{$local_asnum}};
+
+    capability {
+      graceful-restart;
+    }
+
+    api services {
+      processes [ service-nginx ];
+    }
+}
+
+###

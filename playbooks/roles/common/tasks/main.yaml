@@ -15,7 +15,7 @@
 
 - name: Install addition packages
   block:
-  - apt: 
+  - package:
       name: "{{ packages }}"
       state: latest
     vars:

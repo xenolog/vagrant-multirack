@@ -1,7 +1,7 @@
 ---
 - name: Install Docker-related packages
   block:
-  - apt: 
+  - package:
       name: "{{ packages }}"
       state: latest
     vars:
@@ -46,7 +46,7 @@
 - name: Install and start BIRD bgpd
   block:
   - apt_repository: repo='ppa:cz.nic-labs/bird'
-  - apt: name=bird state=latest update_cache=yes
+  - package: name=bird state=latest update_cache=yes
   - file: path=/etc/init/bird.override state=absent
   - copy: src=bird_master.toml dest=/etc/confd/conf.d/bird.toml
   - copy: src=bird_master.tmpl dest=/etc/confd/templates/bird.tmpl
@@ -75,7 +75,7 @@
     when: virt_router_unit_installed.changed
 
 - name: Vartual racks
-  debug: 
+  debug:
     msg: "{{virt_racks}}"
 
 - name: Configure virtual TOR

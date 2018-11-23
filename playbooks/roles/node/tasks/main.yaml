@@ -5,41 +5,21 @@
       dest: /etc/network/interfaces
       line: "      gateway {{tor_ipaddr}}"
       insertafter: "^iface\\s+{{rack_iface}}\\s+"
-    register: interfaces_rack_changed
+    register: interfaces_rack
   - replace:
       dest: /etc/dhcp/dhclient.conf
       regexp: "(,\\s+routers,)"
       replace: ","
-    register: dhclient_conf_changed
+    register: dhclient_conf
   - shell: "ifdown eth0 ;sleep 1; ifup eth0"
     ignore_errors: True
-    when: dhclient_conf_changed.changed
+    when: dhclient_conf.changed
   - command: "ip route delete default"
     ignore_errors: True
-    when: interfaces_rack_changed.changed
+    when: interfaces_rack.changed
   - shell: "ifdown {{rack_iface}} ;sleep 1; ifup {{rack_iface}}"
     ignore_errors: True
-    when: interfaces_rack_changed.changed
-
-- block:
-  - name: Install and start BIRD bgpd
-    apt_repository: repo='ppa:cz.nic-labs/bird'
-  - package: name=bird state=latest update_cache=yes
-  - file: path=/etc/init/bird.override state=absent
-  - copy: src=bird_node.toml dest=/etc/confd/conf.d/bird_node.toml
-  - copy: src=bird_node.tmpl dest=/etc/confd/templates/bird_node.tmpl
-  - name: Generate main BIRD config by confd
-    command: confd -onetime -node=http://{{ master_node_ipaddr }}:4001
-    environment:
-      HOSTNAME: "{{ node_name }}"
-      RACK_NUMBER: "{{ rack_number }}"
-    ignore_errors: True
-  - file: path=/var/log/bird state=directory owner=bird group=bird mode=755
-  - copy: dest=/var/log/bird/master.log content="Use 'journalctl -u bird' for looking log."
-  - name: disable start of bird6 service
-    file: path=/etc/bird/bird6.conf state=absent
-  - service: name=bird6 enabled=no state=stopped
-  - service: name=bird enabled=yes state=reloaded
+    when: interfaces_rack.changed
 
 - name: Install and configure NGiNX
   block:
@@ -51,3 +31,43 @@
       line: "        add_header X-Backend-Server $hostname;"
       insertafter: "^http\\s+{"
     notify: reload_nginx
+  - meta: flush_handlers  # waiting nginx reload
+
+- name: Add VIP1 IP address to lo on each node
+  block:
+  - name: Add VIP1 into interfaces file
+    lineinfile:
+      dest: /etc/network/interfaces
+      line: "      post-up ip addr add {{vip1}}/32 dev lo label lo:nginx || true"
+      insertafter: "^iface lo inet loopback"
+    register: interfaces_lo
+  - shell: "ip addr add {{vip1}}/32 dev lo label lo:nginx"
+    # ignore_errors: True
+    when: interfaces_lo.changed
+
+- name: Install and start ExaBGP
+  block:
+  - name: Install setuptools (NOT pip !!!)
+    package: name=python3-setuptools
+  # - shell: "easy_install3 pip"
+  - name: Install latest ExaBGP
+    command: "easy_install3 exabgp"
+  - copy: src=exabgp.toml dest=/etc/confd/conf.d/exabgp.toml
+  - copy: src=exabgp.tmpl dest=/etc/confd/templates/exabgp.tmpl
+  - file: path=/etc/exabgp state=directory mode=755
+  - copy: src=ch_nginx.conf dest=/etc/exabgp/
+  - name: Generate ExaBGP config by confd
+    command: confd -onetime -node=http://{{ master_node_ipaddr }}:4001
+    environment:
+      HOSTNAME: "{{ node_name }}"
+      RACK_NUMBER: "{{ rack_number }}"
+    # ignore_errors: True
+  - name: ExaBGP unit
+    copy: src=exabgp.service dest=/etc/systemd/system/exabgp.service
+    notify: reload_systemd_units
+  - meta: flush_handlers  # waiting reload systemd units
+  - service: name=exabgp enabled=yes state=started
+
+  # - file: path=/var/log/bird state=directory owner=bird group=bird mode=755
+  # - copy: dest=/var/log/bird/master.log content="Use 'journalctl -u bird' for looking log."
+

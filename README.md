@@ -13,7 +13,7 @@ The features of this LAB:
 
 * One AS per rack, iBGP will be used
 * BGP speaker on the nodes is only announcer. It does not receive any route information from Core router or neighboors.
-* The TOR switches works only on L2 level. "L2 per rack" means, that 802.1q vlan inside rack terminated on the TOR and converted to vxlan or another method of L2 virtualization.  The only Core router is gateway for nodes, not a TOR !!! 
+* The TOR switches works only on L2 level. "L2 per rack" means, that 802.1q vlan inside rack terminated on the TOR and converted to vxlan or another method of L2 virtualization.  The only Core router is gateway for nodes, not a TOR !!!
 
 
 Typical server for this lab is:
@@ -79,7 +79,7 @@ By default will be deployed environmert, contains:
 You able to re-define following default constants:
 
 * DEFAULT_SERVER_URL -- Depends of your Vagrant distributions. Possible, you should to redefine it to '<https://vagrantcloud.com>'
-* VAGRANT_MR_BOX -- Vagrant box name. It should be 
+* VAGRANT_MR_BOX -- Vagrant box name. It should be
 * VAGRANT_MR_NAME_SUFFIX -- virtual env name suffix to able deploy different ENVs from one repo.
 * VAGRANT_MR_BASE_AS_NUMBER -- AS number of core router and master node
 * VAGRANT_MR_NETWORK_PUBLIC -- Public network CIDR
@@ -95,4 +95,5 @@ You able to re-define following default constants:
 * VAGRANT_MR_CLIENT_MEMORY -- amount of memory for client node (default: 1024)
 * VAGRANT_MR_CLIENT_CPUS -- amount of CPUs for client node (default: 1)
 * VAGRANT_MR_NO_PROVISION -- may be defined to prevent provisioning nodes. It helpfull to debug purpose.
-
+* VAGRANT_MR_VIP_POOL -- network, which will announced from nodes, (def: 10.10.0.0/24)
+* VAGRANT_MR_VIP1 -- pre-defined VIP (def: 10.10.0.10) which will be applied after deployment, NGiNX will answer.
