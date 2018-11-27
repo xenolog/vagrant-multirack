@@ -26,7 +26,6 @@
         - telnet
         - vim
         - iperf3
-        - nmap
         - ethtool
   - name: Install ETCDTOOL
     copy: src=etcdtool dest=/usr/local/bin/etcdtool owner=root mode=755

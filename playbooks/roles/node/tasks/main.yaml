@@ -1,5 +1,6 @@
 ---
-- block:
+- name: Prepare network configuration
+  block:
   - name: Configure default gateway through TOR
     lineinfile:
       dest: /etc/network/interfaces

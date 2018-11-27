@@ -25,9 +25,9 @@
     register: etcdctl_installed
     ignore_errors: True
   - command: docker cp etcd.service:/usr/local/bin/etcdctl /usr/local/bin/etcdctl
-    when: etcdctl_installed|failed
+    when: etcdctl_installed is failed
   - file: path=/usr/local/bin/etcdctl mode=755
-    when: etcdctl_installed|failed
+    when: etcdctl_installed is failed
 
 - name: Upload network_metadata to ETCD
   block:
@@ -36,7 +36,7 @@
     register: network_metadata_uploaded
     ignore_errors: True
   - command: etcdtool import -y -f yaml /network_metadata /etc/network_metadata.yaml
-    when: network_metadata_uploaded|failed
+    when: network_metadata_uploaded is failed
     register: network_metadata_loaded_to_etcd
   - command: /usr/local/bin/etcd.sh backup
     environment:
