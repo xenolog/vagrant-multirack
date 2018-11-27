@@ -1,0 +1,12 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    lo:
+      addresses:
+        {{vip1}}/32
+    {{rack_iface}}:
+      gateway4: {{tor_ipaddr}}
+      routes:
+        - to: {{vip_pool}}
+          via: {{master_node_ipaddr}}

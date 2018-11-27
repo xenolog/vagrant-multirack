@@ -18,4 +18,3 @@
   - shell: "netplan generate && netplan apply"
     # ignore_errors: True
     when: rack_netconfig.changed
-
