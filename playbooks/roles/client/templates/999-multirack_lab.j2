@@ -1,0 +1,9 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{rack_iface}}:
+      gateway4: {{public_gateway}}
+      routes:
+        - to: {{vip_pool}}
+          via: {{master_node_ipaddr}}
