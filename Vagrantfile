@@ -160,6 +160,8 @@ ansible_host_vars = {}
 end
 ansible_host_vars[master_node_name] = {
   "node_name"                  => "#{master_node_name}",
+  "public_iface"               => "eth1",
+  "public_gateway"             => public_gateway,
 }
 ansible_host_vars[client_node_name] = {
   "node_name"                  => client_node_name,

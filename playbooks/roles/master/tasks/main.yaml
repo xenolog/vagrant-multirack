@@ -8,6 +8,7 @@
       packages:
         - docker.io
         - python3-docker
+        - bird
 
 - name: Install and run ETCD
   block:
@@ -43,11 +44,19 @@
       ETCD_IPV4: "{{ master_node_ipaddr }}"
     when: network_metadata_loaded_to_etcd.changed
 
-- name: Install and start BIRD bgpd
+- name: Prepare network configuration
   block:
-  - apt_repository: repo='ppa:cz.nic-labs/bird'
-  - package: name=bird state=latest update_cache=yes
-  - file: path=/etc/init/bird.override state=absent
+  - name: Configure default gateway through Public network and route to VIPs
+    template: src="999-multirack_lab.j2" dest="/etc/netplan/999-multirack_lab.yaml"
+    register: netconfig
+  - command: "ip route delete default"
+    ignore_errors: True
+    when: netconfig.changed
+  - shell: "netplan generate && netplan apply"
+    when: netconfig.changed
+
+- name: Configure BIRD bgpd
+  block:
   - copy: src=bird_master.toml dest=/etc/confd/conf.d/bird.toml
   - copy: src=bird_master.tmpl dest=/etc/confd/templates/bird.tmpl
   - name: Generate main BIRD config by confd
