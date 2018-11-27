@@ -4,7 +4,7 @@ network:
   ethernets:
     lo:
       addresses:
-        {{vip1}}/32
+        - {{vip1}}/32
     {{rack_iface}}:
       gateway4: {{tor_ipaddr}}
       routes:
