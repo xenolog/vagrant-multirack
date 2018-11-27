@@ -22,7 +22,7 @@ ENV["VAGRANT_DEFAULT_PROVIDER"] = "libvirt"
 prefix = pool.gsub(/\.\d+\.\d+\/\d\d$/, "")
 
 # Boxes with libvirt provider support:
-box = ENV["VAGRANT_MR_BOX"] || "generic/ubuntu1604"
+box = ENV["VAGRANT_MR_BOX"] || "generic/ubuntu1804"
 
 num_racks = (ENV["VAGRANT_MR_NUM_OF_RACKS"] || "2").to_i
 user = ENV["USER"]
