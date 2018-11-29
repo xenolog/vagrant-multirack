@@ -235,6 +235,7 @@ Vagrant.configure("2") do |config|
       :model_type => "e1000",
       :libvirt__network_name => "mr_#{node_name_prefix}_public",
       :libvirt__dhcp_enabled => false,
+      :autostart => true,
       :libvirt__forward_mode => "nat"
     )
     # "rack" isolated networks per rack
@@ -245,6 +246,7 @@ Vagrant.configure("2") do |config|
         :model_type => "e1000",
         :libvirt__network_name => "mr_#{node_name_prefix}_rack%02d" % [rack_no],
         :libvirt__dhcp_enabled => false,
+        :autostart => true,
         :libvirt__forward_mode => "none"
       )
     end
