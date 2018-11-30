@@ -29,10 +29,8 @@
 
 - name: Install and start ExaBGP
   block:
-  - name: Install setuptools (NOT pip !!!)
-    package: name=python3-setuptools
-  - name: Install latest ExaBGP
-    command: "easy_install3 exabgp"
+  - name: Install ExaBGP
+    package: name=python3-exabgp
   - copy: src=exabgp.toml dest=/etc/confd/conf.d/exabgp.toml
   - copy: src=exabgp.tmpl dest=/etc/confd/templates/exabgp.tmpl
   - file: path=/etc/exabgp state=directory mode=755
