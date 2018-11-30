@@ -15,6 +15,9 @@ if [[ "${COMMAND}" == "create" ]] ; then
 elif [[ "${COMMAND}" == "destroy" ]] ; then
     vagrant destroy -f
     exit $?
+elif [[ "${COMMAND}" == "ssh" ]] ; then
+    vagrant ssh $2 -c 'sudo -i'
+    exit $?
 else
     echo "[err] unsupported command."
     exit 1
