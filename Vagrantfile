@@ -247,7 +247,7 @@ Vagrant.configure("2") do |config|
         :libvirt__network_name => "mr_#{node_name_prefix}_rack%02d" % [rack_no],
         :libvirt__dhcp_enabled => false,
         :autostart => true,
-        :libvirt__forward_mode => "none"
+        :libvirt__forward_mode => "veryisolated"
       )
     end
     config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -324,7 +324,7 @@ Vagrant.configure("2") do |config|
           :model_type => "e1000",
           :libvirt__network_name => "mr_#{node_name_prefix}_rack%02d" % [rack_no],
           :libvirt__dhcp_enabled => false,
-          :libvirt__forward_mode => "none"
+          :libvirt__forward_mode => "veryisolated"
         )
       end
     end
